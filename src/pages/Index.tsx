@@ -70,8 +70,8 @@ const Index = () => {
               <Bot className="w-7 h-7 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-                Detský AI Kamarát
+            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+                AI Programátor
                 <Sparkles className="w-5 h-5 text-accent" />
               </h1>
               <SafeModeIndicator isActive={settings?.safe_mode ?? true} />
@@ -106,24 +106,26 @@ const Index = () => {
               <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mb-6 animate-bounce">
                 <Sparkles className="w-12 h-12 text-primary" />
               </div>
-              <h2 className="text-2xl font-bold mb-2">Ahoj! Ja som tvoj AI kamarát 👋</h2>
+              <h2 className="text-2xl font-bold mb-2">Ahoj! Som tvoj AI Programátor 🚀</h2>
               <p className="text-muted-foreground max-w-md">
-                Môžem ti pomôcť s úlohami, vysvetliť ťažké veci, alebo si len tak porozprávať.
-                Napíš mi niečo!
+                Viem písať kód v akomkoľvek jazyku - Python, JavaScript, HTML, C++ a ďalšie.
+                Môžem generovať aj veľké projekty s tisíckami riadkov!
               </p>
               <div className="flex flex-wrap gap-2 mt-6 justify-center">
-                {["Vysvetli mi planéty 🪐", "Pomôž mi s matematikou", "Povedz mi vtip 😄"].map(
-                  (suggestion) => (
-                    <Button
-                      key={suggestion}
-                      variant="outline"
-                      className="rounded-full border-2 border-primary/30 hover:border-primary hover:bg-primary/5"
-                      onClick={() => sendMessage(suggestion)}
-                    >
-                      {suggestion}
-                    </Button>
-                  )
-                )}
+                {[
+                  "Vytvor hru had v Pythone 🐍",
+                  "Napíš kalkulačku v HTML/JS",
+                  "Vytvor webstránku s CSS animáciami ✨",
+                ].map((suggestion) => (
+                  <Button
+                    key={suggestion}
+                    variant="outline"
+                    className="rounded-full border-2 border-primary/30 hover:border-primary hover:bg-primary/5"
+                    onClick={() => sendMessage(suggestion)}
+                  >
+                    {suggestion}
+                  </Button>
+                ))}
               </div>
             </div>
           ) : (
