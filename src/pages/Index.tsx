@@ -70,10 +70,11 @@ const Index = () => {
               <Bot className="w-7 h-7 text-primary-foreground" />
             </div>
             <div>
-            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-                AI Programátor
+              <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+                AI Programátor Ultimate
                 <Sparkles className="w-5 h-5 text-accent" />
               </h1>
+              <p className="text-xs text-muted-foreground">Vytvoril Tobias Kromka</p>
               <SafeModeIndicator isActive={settings?.safe_mode ?? true} />
             </div>
           </div>
@@ -106,16 +107,17 @@ const Index = () => {
               <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mb-6 animate-bounce">
                 <Sparkles className="w-12 h-12 text-primary" />
               </div>
-              <h2 className="text-2xl font-bold mb-2">Ahoj! Som tvoj AI Programátor 🚀</h2>
+              <h2 className="text-2xl font-bold mb-2">Ahoj! Som AI Programátor Ultimate 🚀</h2>
               <p className="text-muted-foreground max-w-md">
-                Viem písať kód v akomkoľvek jazyku - Python, JavaScript, HTML, C++ a ďalšie.
-                Môžem generovať aj veľké projekty s tisíckami riadkov!
+                Viem písať kód v akomkoľvek jazyku, vyhľadávať na internete, a generovať
+                projekty s miliónmi riadkov! Vytvoril ma Tobias Kromka.
               </p>
               <div className="flex flex-wrap gap-2 mt-6 justify-center">
                 {[
                   "Vytvor hru had v Pythone 🐍",
-                  "Napíš kalkulačku v HTML/JS",
+                  "Vyhľadaj najnovšie AI novinky 🌐",
                   "Vytvor webstránku s CSS animáciami ✨",
+                  "Kto ťa vytvoril? 🤔",
                 ].map((suggestion) => (
                   <Button
                     key={suggestion}
