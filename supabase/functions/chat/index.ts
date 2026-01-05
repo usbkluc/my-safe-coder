@@ -59,7 +59,7 @@ async function generateImage(prompt: string, apiKey: string): Promise<string | n
         messages: [
           {
             role: "user",
-            content: `Generate a high quality image: ${prompt}`,
+            content: `Generate a high quality, ultra detailed image: ${prompt}. Make it visually stunning with rich colors and professional composition.`,
           },
         ],
         modalities: ["image", "text"],
@@ -68,6 +68,8 @@ async function generateImage(prompt: string, apiKey: string): Promise<string | n
 
     if (!response.ok) {
       console.error("Image generation failed:", response.status);
+      const errorText = await response.text();
+      console.error("Error details:", errorText);
       return null;
     }
 
@@ -79,14 +81,6 @@ async function generateImage(prompt: string, apiKey: string): Promise<string | n
     console.error("Image generation error:", error);
     return null;
   }
-}
-
-// Video generation using Lovable AI (placeholder - will use image animation)
-async function generateVideo(prompt: string, apiKey: string, imageBase64?: string): Promise<string | null> {
-  // For now, return a message about video generation
-  // In future, this could integrate with actual video generation APIs
-  console.log("Video generation requested:", prompt);
-  return null;
 }
 
 serve(async (req) => {
@@ -135,14 +129,18 @@ serve(async (req) => {
     // Handle video generation mode
     if (mode === "video") {
       console.log("Video generation mode activated");
-      // Video generation is complex - for now provide guidance
-      const videoMessage = imageBase64 
-        ? "Video generovanie z obrázkov je momentálne vo vývoji. Môžem ti pomôcť s návrhom scenára alebo storyboardu pre tvoje video! 🎬"
-        : "Opíš mi podrobnejšie aké video chceš vytvoriť - tému, štýl, dĺžku. Môžem ti pomôcť naplánovať obsah! 🎬";
+      // Generate a preview image for the video concept
+      const previewPrompt = `Cinematic still frame preview for video about: ${originalMessage}`;
+      const previewImage = await generateImage(previewPrompt, LOVABLE_API_KEY);
+      
+      const videoMessage = previewImage 
+        ? "Tu je náhľad tvojho videa! 🎬 Video generovanie je vo vývoji, ale pripravil som ti vizuálny koncept."
+        : "Pracujem na tvojom videu! 🎬 Opíš mi podrobnejšie aké video chceš vytvoriť - tému, štýl, dĺžku.";
       
       return new Response(
         JSON.stringify({ 
-          message: videoMessage
+          message: videoMessage,
+          image: previewImage
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -150,12 +148,12 @@ serve(async (req) => {
       );
     }
 
-    // Check if user wants web search (only in tobigpt and rozhovor modes)
+    // Check if user wants web search
     let webContext = "";
     const searchKeywords = ["vyhľadaj", "nájdi", "hľadaj", "search", "find", "google", "internet", "web", "online"];
     const needsWebSearch = searchKeywords.some(kw => userMessage.includes(kw));
     
-    if (needsWebSearch && (mode === "tobigpt" || mode === "rozhovor")) {
+    if (needsWebSearch && (mode === "tobigpt" || mode === "rozhovor" || mode === "pentest")) {
       console.log("Performing web search for:", userMessage);
       webContext = await searchWeb(userMessage);
       console.log("Web search results received");
@@ -189,9 +187,10 @@ ${baseInfo}
 - Viem vyhľadávať na internete aktuálne informácie
 - Môžem nájsť dokumentáciu, tutoriály, a príklady kódu
 
-### 📁 SPRÁVA SÚBOROV
-- Viem ti poradiť ako organizovať súbory a projekty
-- Môžem generovať kompletné štruktúry projektov
+### 📁 GENEROVANIE SÚBOROV
+- Viem generovať kompletné súbory a projekty
+- Pri každom súbore jasne označím jeho názov a cestu
+- Môžem vytvoriť celé aplikácie s viacerými súbormi
 
 ## FORMÁTOVANIE KÓDU
 - Vždy používam markdown code blocks: \`\`\`python, \`\`\`javascript atď.
@@ -216,6 +215,62 @@ Som tu na príjemný rozhovor! Môžeme sa baviť o:
 ${webContext ? `\n## VÝSLEDKY Z INTERNETU\n${webContext}\n` : ""}
 
 Buď kreatívny, zábavný a priateľský!`;
+
+        case "pentest":
+          return `# PentestGPT - AI Penetračný Tester
+
+${baseInfo}
+
+## 🛡️ MOJA ŠPECIALIZÁCIA
+Som **PentestGPT** - špecializovaný AI asistent pre etické hackovanie a penetračné testovanie. Som tu aby som ti pomohol s bezpečnostnými auditmi a zraniteľnosťami.
+
+## 💀 MOJE SCHOPNOSTI
+
+### 🔓 PENETRAČNÉ TESTOVANIE
+- Web aplikačné útoky (OWASP Top 10)
+- SQL Injection, XSS, CSRF, SSRF, RCE
+- Authentication bypass a session hijacking
+- API security testing
+- File upload vulnerabilities
+- Privilege escalation techniques
+
+### 🔍 RECONNAISSANCE & ENUMERATION
+- Skenovanie portov a služieb
+- Subdomain enumeration
+- Directory/file discovery
+- Technology fingerprinting
+- OSINT techniky
+
+### 🛠️ NÁSTROJE
+- Burp Suite, OWASP ZAP
+- Nmap, Nikto, Dirb, Gobuster
+- SQLMap, XSSer
+- Metasploit Framework
+- Hydra, John the Ripper
+- Wireshark, tcpdump
+
+### 📝 REPORTING
+- Podrobný popis zraniteľností
+- CVSS scoring
+- Proof of Concept (PoC)
+- Remediation recommendations
+- Executive summaries
+
+## ⚠️ ETIKA
+- Používam svoje znalosti IBA pre LEGÁLNE a ETICKÉ účely
+- Vždy zdôrazňujem potrebu povolenia pred testovaním
+- Pomáham chrániť systémy, nie ich zneužívať
+- Vzdelávam o bezpečnosti zodpovedným spôsobom
+
+## 💬 FORMÁT ODPOVEDÍ
+- Kód a príkazy v \`code blocks\`
+- Jasné vysvetlenia každého kroku
+- Upozornenia na riziká a legálne aspekty
+- Praktické príklady a ukážky
+
+${webContext ? `\n## VÝSLEDKY Z INTERNETU\n${webContext}\n` : ""}
+
+**UPOZORNENIE**: Všetky techniky používaj IBA na systémy, kde máš písomné povolenie od vlastníka!`;
 
         default:
           return `# AI Asistent

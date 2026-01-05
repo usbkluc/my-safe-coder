@@ -7,7 +7,7 @@ interface ChatInputProps {
   onSend: (message: string, imageBase64?: string) => void;
   isLoading: boolean;
   disabled?: boolean;
-  mode?: "tobigpt" | "rozhovor" | "genob" | "video";
+  mode?: "tobigpt" | "rozhovor" | "genob" | "video" | "pentest";
   allowImage?: boolean;
 }
 
@@ -60,6 +60,8 @@ const ChatInput = ({ onSend, isLoading, disabled, mode, allowImage }: ChatInputP
         return "Opíš obrázok, ktorý chceš vygenerovať... 🎨";
       case "video":
         return "Opíš video, ktoré chceš vytvoriť... 🎬";
+      case "pentest":
+        return "Opíš bezpečnostný problém... 🛡️";
       default:
         return "Napíš svoju otázku... 💭";
     }
