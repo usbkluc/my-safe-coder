@@ -44,36 +44,105 @@ async function searchWeb(query: string): Promise<string> {
   }
 }
 
+// Image generation using Lovable AI
+async function generateImage(prompt: string, apiKey: string): Promise<string | null> {
+  try {
+    console.log("Generating image with prompt:", prompt);
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image-preview",
+        messages: [
+          {
+            role: "user",
+            content: `Generate a high quality image: ${prompt}`,
+          },
+        ],
+        modalities: ["image", "text"],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Image generation failed:", response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    console.log("Image generated successfully");
+    return imageUrl || null;
+  } catch (error) {
+    console.error("Image generation error:", error);
+    return null;
+  }
+}
+
+// Video generation using Lovable AI (placeholder - will use image animation)
+async function generateVideo(prompt: string, apiKey: string, imageBase64?: string): Promise<string | null> {
+  // For now, return a message about video generation
+  // In future, this could integrate with actual video generation APIs
+  console.log("Video generation requested:", prompt);
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { messages, blockedTopics, blockedWords } = await req.json();
+    const { messages, mode, imageBase64 } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Check if user message contains blocked content
     const userMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
-    
-    const blockedTopicFound = blockedTopics?.find((topic: string) => 
-      userMessage.includes(topic.toLowerCase())
-    );
-    
-    const blockedWordFound = blockedWords?.find((word: string) => 
-      userMessage.includes(word.toLowerCase())
-    );
+    const originalMessage = messages[messages.length - 1]?.content || "";
 
-    if (blockedTopicFound || blockedWordFound) {
-      console.log("Blocked content detected:", blockedTopicFound || blockedWordFound);
+    // Handle image generation mode
+    if (mode === "genob") {
+      console.log("Image generation mode activated");
+      const imageUrl = await generateImage(originalMessage, LOVABLE_API_KEY);
+      
+      if (imageUrl) {
+        return new Response(
+          JSON.stringify({ 
+            image: imageUrl,
+            message: "Tu je tvoj vygenerovaný obrázok! 🎨" 
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      } else {
+        return new Response(
+          JSON.stringify({ 
+            error: "Nepodarilo sa vygenerovať obrázok. Skús to znova." 
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+    }
+
+    // Handle video generation mode
+    if (mode === "video") {
+      console.log("Video generation mode activated");
+      // Video generation is complex - for now provide guidance
+      const videoMessage = imageBase64 
+        ? "Video generovanie z obrázkov je momentálne vo vývoji. Môžem ti pomôcť s návrhom scenára alebo storyboardu pre tvoje video! 🎬"
+        : "Opíš mi podrobnejšie aké video chceš vytvoriť - tému, štýl, dĺžku. Môžem ti pomôcť naplánovať obsah! 🎬";
+      
       return new Response(
         JSON.stringify({ 
-          blocked: true, 
-          message: "Prepáč, ale o tejto téme sa nemôžem rozprávať. Skús sa ma opýtať niečo iné! 🌈" 
+          message: videoMessage
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -81,25 +150,34 @@ serve(async (req) => {
       );
     }
 
-    // Check if user wants web search
+    // Check if user wants web search (only in tobigpt and rozhovor modes)
     let webContext = "";
     const searchKeywords = ["vyhľadaj", "nájdi", "hľadaj", "search", "find", "google", "internet", "web", "online"];
     const needsWebSearch = searchKeywords.some(kw => userMessage.includes(kw));
     
-    if (needsWebSearch) {
+    if (needsWebSearch && (mode === "tobigpt" || mode === "rozhovor")) {
       console.log("Performing web search for:", userMessage);
       webContext = await searchWeb(userMessage);
       console.log("Web search results received");
     }
 
-    // Ultimate AI Programmer system prompt
-    const systemPrompt = `# AI PROGRAMÁTOR ULTIMATE - Vytvoril Tobias Kromka
+    // Get system prompt based on mode
+    const getSystemPrompt = () => {
+      const baseInfo = `## KTO SOM
+Som AI vytvorený **Tobiasom Kromkom**. Keď sa ma niekto spýta kto ma vytvoril, odpoviem: "Vytvoril ma Tobias Kromka! 🚀"
 
-## KTO SOM
-Som pokročilý AI programátor vytvorený **Tobiasom Kromkom**. Keď sa ma niekto spýta kto ma vytvoril, odpoviem: "Vytvoril ma Tobias Kromka! 🚀"
+## ŠTÝL KOMUNIKÁCIE
+- Odpovedám v slovenčine 🇸🇰
+- Som priateľský a používam emoji
+- Som trpezlivý a povzbudzujúci`;
+
+      switch (mode) {
+        case "tobigpt":
+          return `# TobiGpt - Programátor & Generátor súborov
+
+${baseInfo}
 
 ## MOJE SCHOPNOSTI
-
 ### 💻 PROGRAMOVANIE BEZ LIMITOV
 - Generujem kód v AKOMKOĽVEK programovacom jazyku
 - Môžem písať projekty s **MILIÓNMI riadkov kódu** - žiadne obmedzenia!
@@ -110,27 +188,45 @@ Som pokročilý AI programátor vytvorený **Tobiasom Kromkom**. Keď sa ma niek
 ### 🌐 PRÍSTUP NA INTERNET
 - Viem vyhľadávať na internete aktuálne informácie
 - Môžem nájsť dokumentáciu, tutoriály, a príklady kódu
-- Ak potrebuješ niečo vyhľadať, povedz "vyhľadaj" alebo "nájdi"
 
 ### 📁 SPRÁVA SÚBOROV
 - Viem ti poradiť ako organizovať súbory a projekty
 - Môžem generovať kompletné štruktúry projektov
-- Vytvorím ti package.json, requirements.txt, a iné konfiguračné súbory
 
 ## FORMÁTOVANIE KÓDU
 - Vždy používam markdown code blocks: \`\`\`python, \`\`\`javascript atď.
 - Pri viacerých súboroch jasne označím názov každého súboru
 - Komentáre píšem v slovenčine
 
-## ŠTÝL KOMUNIKÁCIE
-- Odpovedám v slovenčine 🇸🇰
-- Som priateľský a používam emoji
-- Vysvetľujem kód jednoducho a zrozumiteľne
-- Som trpezlivý a povzbudzujúci
+${webContext ? `\n## VÝSLEDKY Z INTERNETU\n${webContext}\n` : ""}`;
+
+        case "rozhovor":
+          return `# Rozhovor - Priateľský chat
+
+${baseInfo}
+
+## MOJA ÚLOHA
+Som tu na príjemný rozhovor! Môžeme sa baviť o:
+- Čomkoľvek čo ťa zaujíma
+- Tvojich záľubách a koníčkoch
+- Otázkach o svete
+- Vtipoch a zábave
+- Životných radách
 
 ${webContext ? `\n## VÝSLEDKY Z INTERNETU\n${webContext}\n` : ""}
 
-Teraz som pripravený pomôcť ti s čímkoľvek! 🚀`;
+Buď kreatívny, zábavný a priateľský!`;
+
+        default:
+          return `# AI Asistent
+
+${baseInfo}
+
+Som tu aby som ti pomohol s čímkoľvek potrebuješ!`;
+      }
+    };
+
+    const systemPrompt = getSystemPrompt();
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

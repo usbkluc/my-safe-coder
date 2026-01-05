@@ -1,128 +1,191 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Settings, Trash2, Sparkles, Bot } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Trash2, Sparkles, Bot, Code, MessageCircle, Image, Video } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ChatMessage from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
-import SafeModeIndicator from "@/components/SafeModeIndicator";
-import ParentSettingsDialog from "@/components/ParentSettingsDialog";
 import { useChat } from "@/hooks/useChat";
 
-interface ParentalSettings {
-  id: string;
-  password_hash: string;
-  blocked_topics: string[];
-  blocked_words: string[];
-  safe_mode: boolean;
-}
+type AIMode = "tobigpt" | "rozhovor" | "genob" | "video";
+
+const modeConfig = {
+  tobigpt: {
+    icon: Code,
+    label: "TobiGpt",
+    description: "Programovanie & Generovanie súborov",
+    color: "from-blue-500 to-cyan-500",
+  },
+  rozhovor: {
+    icon: MessageCircle,
+    label: "Rozhovor",
+    description: "Chat & Konverzácia",
+    color: "from-purple-500 to-pink-500",
+  },
+  genob: {
+    icon: Image,
+    label: "Gen. Ob.",
+    description: "Generovanie obrázkov",
+    color: "from-orange-500 to-yellow-500",
+  },
+  video: {
+    icon: Video,
+    label: "Video",
+    description: "Tvorba videí",
+    color: "from-green-500 to-emerald-500",
+  },
+};
 
 const Index = () => {
   const { toast } = useToast();
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settings, setSettings] = useState<ParentalSettings | null>(null);
+  const [currentMode, setCurrentMode] = useState<AIMode>("tobigpt");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { messages, isLoading, sendMessage, clearMessages } = useChat({
-    blockedTopics: settings?.blocked_topics || [],
-    blockedWords: settings?.blocked_words || [],
+    mode: currentMode,
   });
 
   useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  useEffect(() => {
-    // Scroll to bottom when new messages arrive
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
-
-  const fetchSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("parental_settings")
-        .select("*")
-        .limit(1)
-        .single();
-
-      if (error) throw error;
-      setSettings(data);
-    } catch (error) {
-      console.error("Error fetching settings:", error);
-    }
-  };
 
   const handleClearChat = () => {
     clearMessages();
     toast({ title: "Chat vymazaný", description: "Nový rozhovor začína!" });
   };
 
+  const handleModeChange = (mode: AIMode) => {
+    setCurrentMode(mode);
+    clearMessages();
+    toast({ 
+      title: `Režim: ${modeConfig[mode].label}`, 
+      description: modeConfig[mode].description 
+    });
+  };
+
+  const config = modeConfig[currentMode];
+  const ModeIcon = config.icon;
+
+  const getSuggestions = () => {
+    switch (currentMode) {
+      case "tobigpt":
+        return [
+          "Vytvor hru had v Pythone 🐍",
+          "Napíš webstránku s CSS animáciami ✨",
+          "Vytvor REST API v Node.js 🚀",
+          "Generuj React komponent 💻",
+        ];
+      case "rozhovor":
+        return [
+          "Ahoj, ako sa máš? 👋",
+          "Povedz mi niečo zaujímavé 🤔",
+          "Kto ťa vytvoril? 🎨",
+          "Čo všetko vieš? 🌟",
+        ];
+      case "genob":
+        return [
+          "Vygeneruj obrázok západu slnka 🌅",
+          "Nakresli futuristické mesto 🏙️",
+          "Vytvor avatar robota 🤖",
+          "Vygeneruj fantasy krajinu 🏔️",
+        ];
+      case "video":
+        return [
+          "Vytvor video o vesmíre 🌌",
+          "Animuj lietajúce vtáky 🦅",
+          "Video s morskými vlnami 🌊",
+          "Vytvor intro animáciu 🎬",
+        ];
+    }
+  };
+
+  const getWelcomeMessage = () => {
+    switch (currentMode) {
+      case "tobigpt":
+        return "Viem písať kód v akomkoľvek jazyku a generovať kompletné projekty!";
+      case "rozhovor":
+        return "Som tu na príjemný rozhovor o čomkoľvek!";
+      case "genob":
+        return "Napíš mi čo chceš a ja ti vygenerujem obrázok!";
+      case "video":
+        return "Vytvorím ti video podľa tvojho opisu. Môžeš pridať aj obrázok!";
+    }
+  };
+
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
       <header className="sticky top-0 z-10 glass-card border-b px-4 py-3">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center animate-float">
-              <Bot className="w-7 h-7 text-primary-foreground" />
+            <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${config.color} flex items-center justify-center animate-float`}>
+              <ModeIcon className="w-7 h-7 text-white" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-                AI Programátor Ultimate
+                {config.label}
                 <Sparkles className="w-5 h-5 text-accent" />
               </h1>
               <p className="text-xs text-muted-foreground">Vytvoril Tobias Kromka</p>
-              <SafeModeIndicator isActive={settings?.safe_mode ?? true} />
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleClearChat}
-              className="rounded-xl hover:bg-destructive/10 hover:text-destructive"
-            >
-              <Trash2 className="w-5 h-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSettingsOpen(true)}
-              className="rounded-xl hover:bg-primary/10 hover:text-primary"
-            >
-              <Settings className="w-5 h-5" />
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleClearChat}
+            className="rounded-xl hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="w-5 h-5" />
+          </Button>
         </div>
       </header>
 
+      {/* Mode Navigation Tabs */}
+      <nav className="sticky top-[73px] z-10 bg-background/95 backdrop-blur border-b px-4 py-2">
+        <div className="max-w-4xl mx-auto flex gap-2 overflow-x-auto">
+          {(Object.keys(modeConfig) as AIMode[]).map((mode) => {
+            const Icon = modeConfig[mode].icon;
+            const isActive = currentMode === mode;
+            return (
+              <Button
+                key={mode}
+                variant={isActive ? "default" : "ghost"}
+                onClick={() => handleModeChange(mode)}
+                className={`rounded-full flex items-center gap-2 transition-all ${
+                  isActive 
+                    ? `bg-gradient-to-r ${modeConfig[mode].color} text-white shadow-lg` 
+                    : "hover:bg-muted"
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span className="hidden sm:inline">{modeConfig[mode].label}</span>
+              </Button>
+            );
+          })}
+        </div>
+      </nav>
+
       {/* Chat Area */}
-      <main className="flex-1 flex flex-col max-w-3xl mx-auto w-full px-4">
+      <main className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-4">
         <ScrollArea className="flex-1 py-6" ref={scrollRef}>
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center py-20 text-center">
-              <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mb-6 animate-bounce">
-                <Sparkles className="w-12 h-12 text-primary" />
+              <div className={`w-24 h-24 rounded-3xl bg-gradient-to-br ${config.color} flex items-center justify-center mb-6 animate-bounce`}>
+                <ModeIcon className="w-12 h-12 text-white" />
               </div>
-              <h2 className="text-2xl font-bold mb-2">Ahoj! Som AI Programátor Ultimate 🚀</h2>
-              <p className="text-muted-foreground max-w-md">
-                Viem písať kód v akomkoľvek jazyku, vyhľadávať na internete, a generovať
-                projekty s miliónmi riadkov! Vytvoril ma Tobias Kromka.
+              <h2 className="text-2xl font-bold mb-2">Ahoj! Som {config.label} 🚀</h2>
+              <p className="text-muted-foreground max-w-md mb-2">
+                {getWelcomeMessage()}
               </p>
-              <div className="flex flex-wrap gap-2 mt-6 justify-center">
-                {[
-                  "Vytvor hru had v Pythone 🐍",
-                  "Vyhľadaj najnovšie AI novinky 🌐",
-                  "Vytvor webstránku s CSS animáciami ✨",
-                  "Kto ťa vytvoril? 🤔",
-                ].map((suggestion) => (
+              <p className="text-xs text-muted-foreground mb-6">Vytvoril ma Tobias Kromka</p>
+              <div className="flex flex-wrap gap-2 mt-2 justify-center">
+                {getSuggestions().map((suggestion) => (
                   <Button
                     key={suggestion}
                     variant="outline"
-                    className="rounded-full border-2 border-primary/30 hover:border-primary hover:bg-primary/5"
+                    className={`rounded-full border-2 hover:border-primary hover:bg-primary/5`}
                     onClick={() => sendMessage(suggestion)}
                   >
                     {suggestion}
@@ -138,12 +201,13 @@ const Index = () => {
                   role={message.role}
                   content={message.content}
                   isBlocked={message.isBlocked}
+                  imageUrl={message.imageUrl}
                 />
               ))}
               {isLoading && messages[messages.length - 1]?.role === "user" && (
                 <div className="flex gap-3 items-start">
-                  <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                    <Bot className="w-5 h-5 text-secondary-foreground" />
+                  <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${config.color} flex items-center justify-center`}>
+                    <ModeIcon className="w-5 h-5 text-white" />
                   </div>
                   <div className="chat-bubble chat-bubble-assistant">
                     <div className="flex gap-1">
@@ -160,17 +224,14 @@ const Index = () => {
 
         {/* Input Area */}
         <div className="sticky bottom-0 py-4 bg-gradient-to-t from-background via-background to-transparent">
-          <ChatInput onSend={sendMessage} isLoading={isLoading} />
+          <ChatInput 
+            onSend={sendMessage} 
+            isLoading={isLoading} 
+            mode={currentMode}
+            allowImage={currentMode === "video"}
+          />
         </div>
       </main>
-
-      {/* Parent Settings Dialog */}
-      <ParentSettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        settings={settings}
-        onSettingsUpdate={fetchSettings}
-      />
     </div>
   );
 };

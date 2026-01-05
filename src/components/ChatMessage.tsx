@@ -8,9 +8,10 @@ interface ChatMessageProps {
   role: "user" | "assistant";
   content: string;
   isBlocked?: boolean;
+  imageUrl?: string;
 }
 
-const ChatMessage = ({ role, content, isBlocked }: ChatMessageProps) => {
+const ChatMessage = ({ role, content, isBlocked, imageUrl }: ChatMessageProps) => {
   const { toast } = useToast();
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
@@ -81,6 +82,17 @@ const ChatMessage = ({ role, content, isBlocked }: ChatMessageProps) => {
     toast({ title: "Stiahnuté!", description: `Súbor code-${index + 1}.${ext} bol stiahnutý` });
   };
 
+  const downloadImage = () => {
+    if (!imageUrl) return;
+    const a = document.createElement("a");
+    a.href = imageUrl;
+    a.download = `generated-${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast({ title: "Stiahnuté!", description: "Obrázok bol stiahnutý" });
+  };
+
   const renderContent = () => {
     if (role === "user" || codeBlocks.length === 0) {
       return <p className="whitespace-pre-wrap leading-relaxed">{content}</p>;
@@ -90,7 +102,6 @@ const ChatMessage = ({ role, content, isBlocked }: ChatMessageProps) => {
     let lastEnd = 0;
 
     codeBlocks.forEach((block, index) => {
-      // Add text before code block
       if (block.start > lastEnd) {
         const textBefore = content.slice(lastEnd, block.start);
         if (textBefore.trim()) {
@@ -102,7 +113,6 @@ const ChatMessage = ({ role, content, isBlocked }: ChatMessageProps) => {
         }
       }
 
-      // Add code block with actions
       parts.push(
         <div key={`code-${index}`} className="my-3 rounded-xl overflow-hidden border border-border/50">
           <div className="flex items-center justify-between px-4 py-2 bg-muted/50 border-b border-border/50">
@@ -143,7 +153,6 @@ const ChatMessage = ({ role, content, isBlocked }: ChatMessageProps) => {
       lastEnd = block.end;
     });
 
-    // Add remaining text after last code block
     if (lastEnd < content.length) {
       const textAfter = content.slice(lastEnd);
       if (textAfter.trim()) {
@@ -188,6 +197,24 @@ const ChatMessage = ({ role, content, isBlocked }: ChatMessageProps) => {
         )}
       >
         {renderContent()}
+        {imageUrl && (
+          <div className="mt-3">
+            <img 
+              src={imageUrl} 
+              alt="Generated" 
+              className="rounded-xl max-w-full max-h-96 object-contain border border-border/50"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              onClick={downloadImage}
+            >
+              <Download className="w-3 h-3 mr-1" />
+              Stiahnuť obrázok
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

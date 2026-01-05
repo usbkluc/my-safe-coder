@@ -4,22 +4,22 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   isBlocked?: boolean;
+  imageUrl?: string;
 }
 
 interface UseChatOptions {
-  blockedTopics: string[];
-  blockedWords: string[];
+  mode: "tobigpt" | "rozhovor" | "genob" | "video";
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
-export const useChat = ({ blockedTopics, blockedWords }: UseChatOptions) => {
+export const useChat = ({ mode }: UseChatOptions) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const sendMessage = useCallback(
-    async (content: string) => {
-      const userMessage: Message = { role: "user", content };
+    async (content: string, imageBase64?: string) => {
+      const userMessage: Message = { role: "user", content, imageUrl: imageBase64 };
       setMessages((prev) => [...prev, userMessage]);
       setIsLoading(true);
 
@@ -35,12 +35,12 @@ export const useChat = ({ blockedTopics, blockedWords }: UseChatOptions) => {
               role: m.role,
               content: m.content,
             })),
-            blockedTopics,
-            blockedWords,
+            mode,
+            imageBase64,
           }),
         });
 
-        // Check for blocked content or errors
+        // Check for JSON response (image/video generation or errors)
         const contentType = response.headers.get("content-type");
         if (contentType?.includes("application/json")) {
           const data = await response.json();
@@ -58,6 +58,26 @@ export const useChat = ({ blockedTopics, blockedWords }: UseChatOptions) => {
             setMessages((prev) => [
               ...prev,
               { role: "assistant", content: `Ups! ${data.error}` },
+            ]);
+            setIsLoading(false);
+            return;
+          }
+
+          // Handle image generation response
+          if (data.image) {
+            setMessages((prev) => [
+              ...prev,
+              { role: "assistant", content: data.message || "Tu je tvoj obrázok! 🎨", imageUrl: data.image },
+            ]);
+            setIsLoading(false);
+            return;
+          }
+
+          // Handle video generation response
+          if (data.video) {
+            setMessages((prev) => [
+              ...prev,
+              { role: "assistant", content: data.message || "Tu je tvoje video! 🎬", imageUrl: data.video },
             ]);
             setIsLoading(false);
             return;
@@ -109,7 +129,6 @@ export const useChat = ({ blockedTopics, blockedWords }: UseChatOptions) => {
                 });
               }
             } catch {
-              // Incomplete JSON, put it back
               textBuffer = line + "\n" + textBuffer;
               break;
             }
@@ -125,7 +144,7 @@ export const useChat = ({ blockedTopics, blockedWords }: UseChatOptions) => {
         setIsLoading(false);
       }
     },
-    [messages, blockedTopics, blockedWords]
+    [messages, mode]
   );
 
   const clearMessages = useCallback(() => {
