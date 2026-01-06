@@ -2,3 +2,9 @@ project_id = "taoysqfzfdmhqrbwldqm"
 
 [functions.chat]
 verify_jwt = false
+
+[functions.elevenlabs-tts]
+verify_jwt = false
+
+[functions.generate-video-with-voice]
+verify_jwt = false

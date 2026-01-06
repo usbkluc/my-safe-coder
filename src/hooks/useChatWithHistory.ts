@@ -7,10 +7,12 @@ interface Message {
   content: string;
   isBlocked?: boolean;
   imageUrl?: string;
+  videoUrl?: string;
+  audioUrl?: string;
 }
 
 interface UseChatOptions {
-  mode: "tobigpt" | "rozhovor" | "genob" | "video" | "pentest";
+  mode: "tobigpt" | "rozhovor" | "genob" | "video" | "pentest" | "voice" | "mediagen";
   conversationId: string | null;
   onConversationCreated: (id: string) => void;
 }
