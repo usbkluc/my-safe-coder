@@ -1,20 +1,24 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Loader2, ImagePlus, X } from "lucide-react";
+import { Send, Loader2, ImagePlus, X, Mic, MicOff } from "lucide-react";
 
 interface ChatInputProps {
   onSend: (message: string, imageBase64?: string) => void;
   isLoading: boolean;
   disabled?: boolean;
-  mode?: "tobigpt" | "rozhovor" | "genob" | "video" | "pentest";
+  mode?: "tobigpt" | "rozhovor" | "genob" | "video" | "pentest" | "voice" | "mediagen";
   allowImage?: boolean;
+  allowVoice?: boolean;
 }
 
-const ChatInput = ({ onSend, isLoading, disabled, mode, allowImage }: ChatInputProps) => {
+const ChatInput = ({ onSend, isLoading, disabled, mode, allowImage, allowVoice }: ChatInputProps) => {
   const [input, setInput] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +54,40 @@ const ChatInput = ({ onSend, isLoading, disabled, mode, allowImage }: ChatInputP
     }
   };
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        // For now, we'll just show a message that voice input was recorded
+        // In the future, this could be transcribed using ElevenLabs STT
+        setInput(input + " [Hlasová správa nahraná] ");
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error("Microphone access denied:", error);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
   const getPlaceholder = () => {
     switch (mode) {
       case "tobigpt":
@@ -57,11 +95,13 @@ const ChatInput = ({ onSend, isLoading, disabled, mode, allowImage }: ChatInputP
       case "rozhovor":
         return "Napíš svoju správu... 💬";
       case "genob":
-        return "Opíš obrázok, ktorý chceš vygenerovať... 🎨";
+        return "Opíš obrázok v ultra HD kvalite... 🎨";
       case "video":
         return "Opíš video, ktoré chceš vytvoriť... 🎬";
       case "pentest":
-        return "Opíš bezpečnostný problém... 🛡️";
+        return "Spýtaj sa na hackovanie a bezpečnosť... 🛡️";
+      case "voice":
+        return "Napíš správu a vypočuj si odpoveď... 🎙️";
       default:
         return "Napíš svoju otázku... 💭";
     }
@@ -108,6 +148,18 @@ const ChatInput = ({ onSend, isLoading, disabled, mode, allowImage }: ChatInputP
               <ImagePlus className="w-5 h-5" />
             </Button>
           </>
+        )}
+        {allowVoice && (
+          <Button
+            type="button"
+            variant={isRecording ? "destructive" : "outline"}
+            size="lg"
+            className={`h-14 w-14 rounded-2xl border-2 ${isRecording ? "animate-pulse" : "border-primary/20"}`}
+            onClick={isRecording ? stopRecording : startRecording}
+            disabled={isLoading}
+          >
+            {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+          </Button>
         )}
         <div className="flex-1 relative">
           <Textarea

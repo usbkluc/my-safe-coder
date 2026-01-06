@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Bot, User, Copy, Download, Check } from "lucide-react";
+import { Bot, User, Copy, Download, Check, Volume2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -9,11 +9,15 @@ interface ChatMessageProps {
   content: string;
   isBlocked?: boolean;
   imageUrl?: string;
+  videoUrl?: string;
+  audioUrl?: string;
+  mode?: string;
 }
 
-const ChatMessage = ({ role, content, isBlocked, imageUrl }: ChatMessageProps) => {
+const ChatMessage = ({ role, content, isBlocked, imageUrl, videoUrl, audioUrl, mode }: ChatMessageProps) => {
   const { toast } = useToast();
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   // Extract code blocks from content
   const extractCodeBlocks = (text: string) => {
@@ -91,6 +95,54 @@ const ChatMessage = ({ role, content, isBlocked, imageUrl }: ChatMessageProps) =
     a.click();
     document.body.removeChild(a);
     toast({ title: "Stiahnuté!", description: "Obrázok bol stiahnutý" });
+  };
+
+  const downloadVideo = () => {
+    if (!videoUrl) return;
+    const a = document.createElement("a");
+    a.href = videoUrl;
+    a.download = `video-${Date.now()}.mp4`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast({ title: "Stiahnuté!", description: "Video bolo stiahnuté" });
+  };
+
+  // Function to speak the message using ElevenLabs TTS
+  const handleSpeak = async () => {
+    if (isSpeaking) return;
+    
+    setIsSpeaking(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            text: content,
+            voiceName: "žena",
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("TTS failed");
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.onended = () => setIsSpeaking(false);
+      await audio.play();
+    } catch (error) {
+      console.error("TTS error:", error);
+      setIsSpeaking(false);
+      toast({ title: "Chyba", description: "Nepodarilo sa prehrať hlas", variant: "destructive" });
+    }
   };
 
   const renderContent = () => {
@@ -197,6 +249,8 @@ const ChatMessage = ({ role, content, isBlocked, imageUrl }: ChatMessageProps) =
         )}
       >
         {renderContent()}
+        
+        {/* Image display */}
         {imageUrl && (
           <div className="mt-3">
             <img 
@@ -214,6 +268,49 @@ const ChatMessage = ({ role, content, isBlocked, imageUrl }: ChatMessageProps) =
               Stiahnuť obrázok
             </Button>
           </div>
+        )}
+
+        {/* Video display */}
+        {videoUrl && (
+          <div className="mt-3">
+            <video 
+              src={videoUrl} 
+              controls 
+              autoPlay
+              loop
+              className="rounded-xl max-w-full max-h-96 border border-border/50"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              onClick={downloadVideo}
+            >
+              <Download className="w-3 h-3 mr-1" />
+              Stiahnuť video
+            </Button>
+          </div>
+        )}
+
+        {/* Audio display */}
+        {audioUrl && (
+          <div className="mt-3">
+            <audio controls src={audioUrl} className="w-full" />
+          </div>
+        )}
+
+        {/* Voice mode - speak button */}
+        {role === "assistant" && mode === "voice" && content && !isBlocked && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleSpeak}
+            disabled={isSpeaking}
+            className="mt-2 gap-2 text-muted-foreground hover:text-primary"
+          >
+            <Volume2 className={`w-4 h-4 ${isSpeaking ? "animate-pulse" : ""}`} />
+            {isSpeaking ? "Hovorím..." : "Vypočuť odpoveď"}
+          </Button>
         )}
       </div>
     </div>

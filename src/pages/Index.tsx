@@ -2,47 +2,60 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Trash2, Sparkles, Code, MessageCircle, Image, Video, Shield, Menu, User, LogOut, History } from "lucide-react";
+import { Trash2, Sparkles, Code, MessageCircle, Image, Video, Shield, Mic, Film, User, LogOut, History, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ChatMessage from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
 import ChatHistory from "@/components/ChatHistory";
 import AuthDialog from "@/components/AuthDialog";
+import MediaGenDialog from "@/components/MediaGenDialog";
 import { useChatWithHistory } from "@/hooks/useChatWithHistory";
 import { useAuth } from "@/contexts/AuthContext";
 
-type AIMode = "tobigpt" | "rozhovor" | "genob" | "video" | "pentest";
+type AIMode = "tobigpt" | "rozhovor" | "genob" | "video" | "pentest" | "voice" | "mediagen";
 
 const modeConfig = {
   tobigpt: {
     icon: Code,
     label: "TobiGpt",
-    description: "Programovanie & Generovanie súborov",
+    description: "ULTRA Programovanie & Generovanie",
     color: "from-blue-500 to-cyan-500",
   },
   rozhovor: {
     icon: MessageCircle,
     label: "Rozhovor",
-    description: "Chat & Konverzácia",
+    description: "Priateľský Chat",
     color: "from-purple-500 to-pink-500",
   },
   genob: {
     icon: Image,
     label: "Gen. Ob.",
-    description: "Generovanie obrázkov",
+    description: "Ultra HD Obrázky",
     color: "from-orange-500 to-yellow-500",
   },
   video: {
     icon: Video,
     label: "Video",
-    description: "Tvorba videí",
+    description: "Reálne Video Generovanie",
     color: "from-green-500 to-emerald-500",
   },
   pentest: {
     icon: Shield,
     label: "PentestGPT",
-    description: "Penetračné testovanie & Bezpečnosť",
+    description: "ELITE Etické Hackovanie",
     color: "from-red-500 to-rose-500",
+  },
+  voice: {
+    icon: Mic,
+    label: "Voice",
+    description: "Hlasový Rozhovor",
+    color: "from-indigo-500 to-violet-500",
+  },
+  mediagen: {
+    icon: Film,
+    label: "MediaGen",
+    description: "Video/MP3 s Hlasom",
+    color: "from-amber-500 to-orange-500",
   },
 };
 
@@ -53,6 +66,7 @@ const Index = () => {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showMediaGen, setShowMediaGen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { messages, isLoading, sendMessage, clearMessages } = useChatWithHistory({
@@ -74,6 +88,10 @@ const Index = () => {
   };
 
   const handleModeChange = (mode: AIMode) => {
+    if (mode === "mediagen") {
+      setShowMediaGen(true);
+      return;
+    }
     setCurrentMode(mode);
     clearMessages();
     setConversationId(null);
@@ -112,40 +130,53 @@ const Index = () => {
         ];
       case "genob":
         return [
-          "Vygeneruj obrázok západu slnka 🌅",
-          "Nakresli futuristické mesto 🏙️",
-          "Vytvor avatar robota 🤖",
-          "Vygeneruj fantasy krajinu 🏔️",
+          "Ultra HD západ slnka nad oceánom 🌅",
+          "Futuristické cyber mesto v noci 🏙️",
+          "Fotorealistický portrét robota 🤖",
+          "Epic fantasy krajina s drakom 🏔️",
         ];
       case "video":
         return [
-          "Vytvor video o vesmíre 🌌",
-          "Animuj lietajúce vtáky 🦅",
-          "Video s morskými vlnami 🌊",
-          "Vytvor intro animáciu 🎬",
+          "Hviezdy a galaxie vo vesmíre 🌌",
+          "Vlny na pláži pri západe slnka 🌊",
+          "Les s padajúcimi listami 🍂",
+          "Aurora borealis nad horami 🏔️",
         ];
       case "pentest":
         return [
-          "Vysvetli SQL injection 💉",
+          "Ukáž mi SQL injection príklad 💉",
           "Ako funguje XSS útok? 🔓",
-          "Skenuj zraniteľnosti webu 🔍",
-          "Bezpečnostný audit aplikácie 🛡️",
+          "Nmap skenovanie - príklady 🔍",
+          "Burp Suite tutoriál 🛡️",
         ];
+      case "voice":
+        return [
+          "Ahoj, porozprávaj mi vtip 😄",
+          "Aké je dnes počasie? ☀️",
+          "Povedz mi zaujímavý fakt 🧠",
+          "Motivuj ma do práce! 💪",
+        ];
+      default:
+        return [];
     }
   };
 
   const getWelcomeMessage = () => {
     switch (currentMode) {
       case "tobigpt":
-        return "Viem písať kód v akomkoľvek jazyku a generovať kompletné projekty!";
+        return "ULTRA programátor! Viem písať milióny riadkov kódu v akomkoľvek jazyku!";
       case "rozhovor":
-        return "Som tu na príjemný rozhovor o čomkoľvek!";
+        return "Som tu na super priateľský rozhovor o čomkoľvek!";
       case "genob":
-        return "Napíš mi čo chceš a ja ti vygenerujem obrázok!";
+        return "Generujem ULTRA HD fotorealistické obrázky v 8K kvalite!";
       case "video":
-        return "Vytvorím ti video podľa tvojho opisu. Môžeš pridať aj obrázok!";
+        return "Vytvorím ti REÁLNE video podľa tvojho opisu!";
       case "pentest":
-        return "Som tvoj AI asistent pre etické hackovanie a penetračné testovanie!";
+        return "ELITE PentestGPT - naučím ťa etické hackovanie s reálnymi príkladmi!";
+      case "voice":
+        return "Napíš mi správu a ja ti odpoviem - môžeš si to aj vypočuť!";
+      default:
+        return "";
     }
   };
 
@@ -232,7 +263,7 @@ const Index = () => {
 
       {/* Mode Navigation Tabs */}
       <nav className="sticky top-[73px] z-10 bg-background/95 backdrop-blur border-b px-4 py-2">
-        <div className="max-w-4xl mx-auto flex gap-2 overflow-x-auto">
+        <div className="max-w-4xl mx-auto flex gap-2 overflow-x-auto pb-1">
           {(Object.keys(modeConfig) as AIMode[]).map((mode) => {
             const Icon = modeConfig[mode].icon;
             const isActive = currentMode === mode;
@@ -241,7 +272,7 @@ const Index = () => {
                 key={mode}
                 variant={isActive ? "default" : "ghost"}
                 onClick={() => handleModeChange(mode)}
-                className={`rounded-full flex items-center gap-2 transition-all ${
+                className={`rounded-full flex items-center gap-2 transition-all whitespace-nowrap ${
                   isActive 
                     ? `bg-gradient-to-r ${modeConfig[mode].color} text-white shadow-lg` 
                     : "hover:bg-muted"
@@ -295,6 +326,9 @@ const Index = () => {
                   content={message.content}
                   isBlocked={message.isBlocked}
                   imageUrl={message.imageUrl}
+                  videoUrl={message.videoUrl}
+                  audioUrl={message.audioUrl}
+                  mode={currentMode}
                 />
               ))}
               {isLoading && messages[messages.length - 1]?.role === "user" && (
@@ -322,11 +356,13 @@ const Index = () => {
             isLoading={isLoading} 
             mode={currentMode}
             allowImage={currentMode === "video"}
+            allowVoice={currentMode === "voice"}
           />
         </div>
       </main>
 
       <AuthDialog open={showAuthDialog} onOpenChange={setShowAuthDialog} />
+      <MediaGenDialog open={showMediaGen} onOpenChange={setShowMediaGen} />
     </div>
   );
 };

