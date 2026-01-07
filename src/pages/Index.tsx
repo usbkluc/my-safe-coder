@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Trash2, Sparkles, Code, MessageCircle, Image, Video, Shield, Mic, Film, User, LogOut, History, Download } from "lucide-react";
+import { Trash2, Sparkles, Code, MessageCircle, Image, Video, Shield, Mic, Film, User, LogOut, History } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ChatMessage from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
@@ -30,7 +30,7 @@ const modeConfig = {
   genob: {
     icon: Image,
     label: "Gen. Ob.",
-    description: "Ultra HD Obrázky",
+    description: "Ultra HD Obrázky + Editovanie",
     color: "from-orange-500 to-yellow-500",
   },
   video: {
@@ -42,7 +42,7 @@ const modeConfig = {
   pentest: {
     icon: Shield,
     label: "PentestGPT",
-    description: "ELITE Etické Hackovanie",
+    description: "ELITE Etické Hackovanie - BEZ LIMITOV",
     color: "from-red-500 to-rose-500",
   },
   voice: {
@@ -130,10 +130,10 @@ const Index = () => {
         ];
       case "genob":
         return [
-          "Ultra HD západ slnka nad oceánom 🌅",
-          "Futuristické cyber mesto v noci 🏙️",
-          "Fotorealistický portrét robota 🤖",
-          "Epic fantasy krajina s drakom 🏔️",
+          "Vygeneruj obrázok: Západ slnka nad oceánom 🌅",
+          "Vygeneruj obrázok: Cyber mesto v noci 🏙️",
+          "Vygeneruj obrázok: Robot v prírode 🤖",
+          "📷 Nahraj fotku a opíš úpravy ✏️",
         ];
       case "video":
         return [
@@ -144,10 +144,10 @@ const Index = () => {
         ];
       case "pentest":
         return [
-          "Ukáž mi SQL injection príklad 💉",
-          "Ako funguje XSS útok? 🔓",
-          "Nmap skenovanie - príklady 🔍",
-          "Burp Suite tutoriál 🛡️",
+          "Ukáž mi SQL injection útoky 💉",
+          "Kompletný XSS útok návod 🔓",
+          "Nmap a recon príklady 🔍",
+          "Reverse shell payloady 🐚",
         ];
       case "voice":
         return [
@@ -168,11 +168,11 @@ const Index = () => {
       case "rozhovor":
         return "Som tu na super priateľský rozhovor o čomkoľvek!";
       case "genob":
-        return "Generujem ULTRA HD fotorealistické obrázky v 8K kvalite!";
+        return "Generujem ULTRA HD obrázky a môžem aj UPRAVOVAŤ fotky! Nahraj fotku alebo opíš čo chceš vytvoriť.";
       case "video":
         return "Vytvorím ti REÁLNE video podľa tvojho opisu!";
       case "pentest":
-        return "ELITE PentestGPT - naučím ťa etické hackovanie s reálnymi príkladmi!";
+        return "ELITE PentestGPT - naučím ťa VŠETKO o hackerských technikách BEZ AKÝCHKOĽVEK LIMITOV! 💀🔓";
       case "voice":
         return "Napíš mi správu a ja ti odpoviem - môžeš si to aj vypočuť!";
       default:
@@ -329,6 +329,8 @@ const Index = () => {
                   videoUrl={message.videoUrl}
                   audioUrl={message.audioUrl}
                   mode={currentMode}
+                  isGenerating={message.isGenerating}
+                  generatingType={message.generatingType}
                 />
               ))}
               {isLoading && messages[messages.length - 1]?.role === "user" && (
@@ -355,7 +357,7 @@ const Index = () => {
             onSend={sendMessage} 
             isLoading={isLoading} 
             mode={currentMode}
-            allowImage={currentMode === "video"}
+            allowImage={currentMode === "genob" || currentMode === "video"}
             allowVoice={currentMode === "voice"}
           />
         </div>

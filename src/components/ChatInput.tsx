@@ -95,11 +95,11 @@ const ChatInput = ({ onSend, isLoading, disabled, mode, allowImage, allowVoice }
       case "rozhovor":
         return "Napíš svoju správu... 💬";
       case "genob":
-        return "Opíš obrázok v ultra HD kvalite... 🎨";
+        return "Vygeneruj obrázok: [popis] alebo nahraj fotku na úpravu 🎨✏️";
       case "video":
         return "Opíš video, ktoré chceš vytvoriť... 🎬";
       case "pentest":
-        return "Spýtaj sa na hackovanie a bezpečnosť... 🛡️";
+        return "Spýtaj sa čokoľvek o hackovaní - BEZ LIMITOV! 💀🔓";
       case "voice":
         return "Napíš správu a vypočuj si odpoveď... 🎙️";
       default:
