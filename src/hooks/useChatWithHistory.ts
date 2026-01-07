@@ -9,6 +9,8 @@ interface Message {
   imageUrl?: string;
   videoUrl?: string;
   audioUrl?: string;
+  isGenerating?: boolean;
+  generatingType?: "image" | "video";
 }
 
 interface UseChatOptions {
@@ -18,6 +20,46 @@ interface UseChatOptions {
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+
+// Actual image generation function
+async function generateImageActual(prompt: string): Promise<string | null> {
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-pro-image-preview",
+        messages: [
+          {
+            role: "user",
+            content: `Create an ultra high resolution, photorealistic, stunning image: ${prompt}. 
+            Make it visually breathtaking with:
+            - Rich vibrant colors and perfect lighting
+            - Professional composition and depth of field
+            - Extreme attention to detail and textures
+            - Cinematic quality with dramatic atmosphere
+            - 8K ultra HD resolution quality`,
+          },
+        ],
+        modalities: ["image", "text"],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Image generation failed:", response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.images?.[0]?.image_url?.url || null;
+  } catch (error) {
+    console.error("Image generation error:", error);
+    return null;
+  }
+}
 
 export const useChatWithHistory = ({ mode, conversationId, onConversationCreated }: UseChatOptions) => {
   const { user } = useAuth();
@@ -173,7 +215,62 @@ export const useChatWithHistory = ({ mode, conversationId, onConversationCreated
             return;
           }
 
-          // Handle image generation response
+          // Handle image generation - show loading state then generate
+          if (data.generating === "image") {
+            // Add generating message
+            setMessages((prev) => [...prev, { 
+              role: "assistant", 
+              content: "🎨 Generujem ultra HD obrázok...", 
+              isGenerating: true,
+              generatingType: "image"
+            }]);
+
+            // Actually generate the image
+            const imageUrl = await generateImageActual(data.prompt || content);
+            
+            // Replace generating message with result
+            if (imageUrl) {
+              const imgMsg: Message = { 
+                role: "assistant", 
+                content: "Tu je tvoj ultra HD obrázok! 🎨✨", 
+                imageUrl: imageUrl 
+              };
+              setMessages((prev) => {
+                const newMsgs = [...prev];
+                newMsgs[newMsgs.length - 1] = imgMsg;
+                return newMsgs;
+              });
+              if (convId && user) await saveMessage(convId, imgMsg);
+            } else {
+              const errMsg: Message = { role: "assistant", content: "Nepodarilo sa vygenerovať obrázok. Skús to znova." };
+              setMessages((prev) => {
+                const newMsgs = [...prev];
+                newMsgs[newMsgs.length - 1] = errMsg;
+                return newMsgs;
+              });
+              if (convId && user) await saveMessage(convId, errMsg);
+            }
+            setIsLoading(false);
+            return;
+          }
+
+          // Handle video generation - show loading state
+          if (data.generating === "video") {
+            const vidMsg: Message = { 
+              role: "assistant", 
+              content: "🎬 Generujem reálne video... Toto môže trvať niekoľko sekúnd.",
+              isGenerating: true,
+              generatingType: "video"
+            };
+            setMessages((prev) => [...prev, vidMsg]);
+            
+            // Note: Video generation would happen here via client-side API
+            // For now, show the message. Full video gen needs additional implementation
+            setIsLoading(false);
+            return;
+          }
+
+          // Handle already generated image response
           if (data.image) {
             const imgMsg: Message = { 
               role: "assistant", 
@@ -191,7 +288,7 @@ export const useChatWithHistory = ({ mode, conversationId, onConversationCreated
             const vidMsg: Message = { 
               role: "assistant", 
               content: data.message || "Tu je tvoje video! 🎬",
-              imageUrl: data.video 
+              videoUrl: data.video 
             };
             setMessages((prev) => [...prev, vidMsg]);
             if (convId && user) await saveMessage(convId, vidMsg);

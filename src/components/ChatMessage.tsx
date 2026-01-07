@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Bot, User, Copy, Download, Check, Volume2 } from "lucide-react";
+import { Bot, User, Copy, Download, Check, Volume2, Loader2, Image as ImageIcon, Video } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -12,9 +12,11 @@ interface ChatMessageProps {
   videoUrl?: string;
   audioUrl?: string;
   mode?: string;
+  isGenerating?: boolean;
+  generatingType?: "image" | "video";
 }
 
-const ChatMessage = ({ role, content, isBlocked, imageUrl, videoUrl, audioUrl, mode }: ChatMessageProps) => {
+const ChatMessage = ({ role, content, isBlocked, imageUrl, videoUrl, audioUrl, mode, isGenerating, generatingType }: ChatMessageProps) => {
   const { toast } = useToast();
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -145,7 +147,43 @@ const ChatMessage = ({ role, content, isBlocked, imageUrl, videoUrl, audioUrl, m
     }
   };
 
+  // Render generating state
+  const renderGeneratingState = () => {
+    return (
+      <div className="flex flex-col items-center gap-3 py-6">
+        <div className="relative">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center animate-pulse">
+            {generatingType === "image" ? (
+              <ImageIcon className="w-8 h-8 text-primary" />
+            ) : (
+              <Video className="w-8 h-8 text-primary" />
+            )}
+          </div>
+          <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+            <Loader2 className="w-4 h-4 text-primary-foreground animate-spin" />
+          </div>
+        </div>
+        <div className="text-center">
+          <p className="font-medium text-foreground">{content}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {generatingType === "image" ? "Prosím počkaj, generujem ultra HD obrázok..." : "Prosím počkaj, generujem video..."}
+          </p>
+        </div>
+        <div className="flex gap-1">
+          <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+          <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+          <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = () => {
+    // Show generating state if applicable
+    if (isGenerating && generatingType) {
+      return renderGeneratingState();
+    }
+
     if (role === "user" || codeBlocks.length === 0) {
       return <p className="whitespace-pre-wrap leading-relaxed">{content}</p>;
     }
@@ -245,13 +283,14 @@ const ChatMessage = ({ role, content, isBlocked, imageUrl, videoUrl, audioUrl, m
           "chat-bubble",
           role === "user" ? "chat-bubble-user" : "chat-bubble-assistant",
           isBlocked && "border-destructive/50 bg-destructive/5",
-          role === "assistant" && codeBlocks.length > 0 && "max-w-[95%]"
+          role === "assistant" && codeBlocks.length > 0 && "max-w-[95%]",
+          isGenerating && "min-w-[280px]"
         )}
       >
         {renderContent()}
         
         {/* Image display */}
-        {imageUrl && (
+        {imageUrl && !isGenerating && (
           <div className="mt-3">
             <img 
               src={imageUrl} 
@@ -271,7 +310,7 @@ const ChatMessage = ({ role, content, isBlocked, imageUrl, videoUrl, audioUrl, m
         )}
 
         {/* Video display */}
-        {videoUrl && (
+        {videoUrl && !isGenerating && (
           <div className="mt-3">
             <video 
               src={videoUrl} 
@@ -300,7 +339,7 @@ const ChatMessage = ({ role, content, isBlocked, imageUrl, videoUrl, audioUrl, m
         )}
 
         {/* Voice mode - speak button */}
-        {role === "assistant" && mode === "voice" && content && !isBlocked && (
+        {role === "assistant" && mode === "voice" && content && !isBlocked && !isGenerating && (
           <Button
             variant="ghost"
             size="sm"
