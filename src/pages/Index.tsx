@@ -219,7 +219,7 @@ const Index = () => {
                   <div className="p-4 border-b flex items-center justify-between">
                     <h2 className="font-semibold flex items-center gap-2">
                       <Sparkles className="w-5 h-5 text-primary" />
-                      AI Módy
+                      Módy
                     </h2>
                   </div>
                   <ScrollArea className="flex-1 p-4">
@@ -287,7 +287,7 @@ const Index = () => {
                 {config.label}
                 <Sparkles className="w-5 h-5 text-accent" />
               </h1>
-              <p className="text-xs text-muted-foreground">Vytvoril Tobias Kromka</p>
+              <p className="text-xs text-muted-foreground">Vytvoril tK1</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -342,7 +342,7 @@ const Index = () => {
               <p className="text-muted-foreground max-w-md mb-2">
                 {getWelcomeMessage()}
               </p>
-              <p className="text-xs text-muted-foreground mb-6">Vytvoril ma Tobias Kromka</p>
+              <p className="text-xs text-muted-foreground mb-6">Vytvoril ma tK1</p>
               {!user && (
                 <p className="text-sm text-primary mb-4">
                   💡 Prihlás sa pre ukladanie histórie chatov!
