@@ -2,7 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Trash2, Sparkles, Code, MessageCircle, Image, Video, Shield, Mic, Film, User, LogOut, History } from "lucide-react";
+import { 
+  Trash2, Sparkles, Code, MessageCircle, Image, Video, Shield, 
+  Mic, Film, User, LogOut, History, Menu, GraduationCap, X 
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ChatMessage from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
@@ -12,7 +15,7 @@ import MediaGenDialog from "@/components/MediaGenDialog";
 import { useChatWithHistory } from "@/hooks/useChatWithHistory";
 import { useAuth } from "@/contexts/AuthContext";
 
-type AIMode = "tobigpt" | "rozhovor" | "genob" | "video" | "pentest" | "voice" | "mediagen";
+type AIMode = "tobigpt" | "rozhovor" | "genob" | "video" | "pentest" | "voice" | "mediagen" | "riesittest";
 
 const modeConfig = {
   tobigpt: {
@@ -26,6 +29,12 @@ const modeConfig = {
     label: "Rozhovor",
     description: "Priateľský Chat",
     color: "from-purple-500 to-pink-500",
+  },
+  riesittest: {
+    icon: GraduationCap,
+    label: "RiešiTest",
+    description: "Vyrieš test z fotky",
+    color: "from-emerald-500 to-teal-500",
   },
   genob: {
     icon: Image,
@@ -67,6 +76,7 @@ const Index = () => {
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showMediaGen, setShowMediaGen] = useState(false);
+  const [showModeMenu, setShowModeMenu] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { messages, isLoading, sendMessage, clearMessages } = useChatWithHistory({
@@ -90,11 +100,13 @@ const Index = () => {
   const handleModeChange = (mode: AIMode) => {
     if (mode === "mediagen") {
       setShowMediaGen(true);
+      setShowModeMenu(false);
       return;
     }
     setCurrentMode(mode);
     clearMessages();
     setConversationId(null);
+    setShowModeMenu(false);
     toast({ 
       title: `Režim: ${modeConfig[mode].label}`, 
       description: modeConfig[mode].description 
@@ -127,6 +139,13 @@ const Index = () => {
           "Povedz mi niečo zaujímavé 🤔",
           "Kto ťa vytvoril? 🎨",
           "Čo všetko vieš? 🌟",
+        ];
+      case "riesittest":
+        return [
+          "📷 Nahraj fotku testu",
+          "Potrebujem pomôcť s matematikou 📐",
+          "Vyrieš mi tento test 📝",
+          "Pomôž mi s fyzikou ⚛️",
         ];
       case "genob":
         return [
@@ -167,6 +186,8 @@ const Index = () => {
         return "ULTRA programátor! Viem písať milióny riadkov kódu v akomkoľvek jazyku!";
       case "rozhovor":
         return "Som tu na super priateľský rozhovor o čomkoľvek!";
+      case "riesittest":
+        return "Nahraj fotku testu a ja ti dám SPRÁVNE ODPOVEDE! 📷✅ Matematika, fyzika, chémia, jazyky - všetko vyriešim!";
       case "genob":
         return "Generujem ULTRA HD obrázky a môžem aj UPRAVOVAŤ fotky! Nahraj fotku alebo opíš čo chceš vytvoriť.";
       case "video":
@@ -186,30 +207,78 @@ const Index = () => {
       <header className="sticky top-0 z-10 glass-card border-b px-4 py-3">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {user && (
-              <Sheet open={showHistory} onOpenChange={setShowHistory}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-xl">
-                    <History className="w-5 h-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-80 p-0">
-                  <div className="h-full flex flex-col">
-                    <div className="p-4 border-b">
-                      <h2 className="font-semibold flex items-center gap-2">
-                        <History className="w-5 h-5" />
-                        História chatov
-                      </h2>
-                    </div>
-                    <ChatHistory 
-                      onSelectConversation={handleSelectConversation}
-                      currentConversationId={conversationId}
-                      currentMode={currentMode}
-                    />
+            {/* Mode Menu Button */}
+            <Sheet open={showModeMenu} onOpenChange={setShowModeMenu}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-xl">
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-80 p-0">
+                <div className="h-full flex flex-col">
+                  <div className="p-4 border-b flex items-center justify-between">
+                    <h2 className="font-semibold flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-primary" />
+                      AI Módy
+                    </h2>
                   </div>
-                </SheetContent>
-              </Sheet>
-            )}
+                  <ScrollArea className="flex-1 p-4">
+                    <div className="space-y-2">
+                      {(Object.keys(modeConfig) as AIMode[]).map((mode) => {
+                        const Icon = modeConfig[mode].icon;
+                        const isActive = currentMode === mode;
+                        return (
+                          <button
+                            key={mode}
+                            onClick={() => handleModeChange(mode)}
+                            className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
+                              isActive 
+                                ? `bg-gradient-to-r ${modeConfig[mode].color} text-white shadow-lg` 
+                                : "hover:bg-muted"
+                            }`}
+                          >
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                              isActive ? "bg-white/20" : `bg-gradient-to-br ${modeConfig[mode].color}`
+                            }`}>
+                              <Icon className={`w-5 h-5 ${isActive ? "text-white" : "text-white"}`} />
+                            </div>
+                            <div className="text-left">
+                              <p className={`font-medium ${isActive ? "text-white" : "text-foreground"}`}>
+                                {modeConfig[mode].label}
+                              </p>
+                              <p className={`text-xs ${isActive ? "text-white/80" : "text-muted-foreground"}`}>
+                                {modeConfig[mode].description}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                  
+                  {/* History in the same menu if logged in */}
+                  {user && (
+                    <>
+                      <div className="p-4 border-t">
+                        <h3 className="font-semibold flex items-center gap-2 mb-3">
+                          <History className="w-4 h-4" />
+                          História chatov
+                        </h3>
+                        <ChatHistory 
+                          onSelectConversation={(id) => {
+                            handleSelectConversation(id);
+                            setShowModeMenu(false);
+                          }}
+                          currentConversationId={conversationId}
+                          currentMode={currentMode}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+
             <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${config.color} flex items-center justify-center animate-float`}>
               <ModeIcon className="w-7 h-7 text-white" />
             </div>
@@ -260,31 +329,6 @@ const Index = () => {
           </div>
         </div>
       </header>
-
-      {/* Mode Navigation Tabs */}
-      <nav className="sticky top-[73px] z-10 bg-background/95 backdrop-blur border-b px-4 py-2">
-        <div className="max-w-4xl mx-auto flex gap-2 overflow-x-auto pb-1">
-          {(Object.keys(modeConfig) as AIMode[]).map((mode) => {
-            const Icon = modeConfig[mode].icon;
-            const isActive = currentMode === mode;
-            return (
-              <Button
-                key={mode}
-                variant={isActive ? "default" : "ghost"}
-                onClick={() => handleModeChange(mode)}
-                className={`rounded-full flex items-center gap-2 transition-all whitespace-nowrap ${
-                  isActive 
-                    ? `bg-gradient-to-r ${modeConfig[mode].color} text-white shadow-lg` 
-                    : "hover:bg-muted"
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span className="hidden sm:inline">{modeConfig[mode].label}</span>
-              </Button>
-            );
-          })}
-        </div>
-      </nav>
 
       {/* Chat Area */}
       <main className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-4">
@@ -357,7 +401,7 @@ const Index = () => {
             onSend={sendMessage} 
             isLoading={isLoading} 
             mode={currentMode}
-            allowImage={currentMode === "genob" || currentMode === "video"}
+            allowImage={currentMode === "genob" || currentMode === "video" || currentMode === "riesittest"}
             allowVoice={currentMode === "voice"}
           />
         </div>
