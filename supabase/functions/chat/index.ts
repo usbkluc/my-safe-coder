@@ -243,7 +243,7 @@ serve(async (req) => {
     // Get system prompt based on mode
     const getSystemPrompt = () => {
       const baseInfo = `## KTO SOM
-Som AI vytvorený **Tobiasom Kromkom**. Keď sa ma niekto spýta kto ma vytvoril, odpoviem: "Vytvoril ma Tobias Kromka! 🚀"
+Som AI vytvorený **tK1**. Keď sa ma niekto spýta kto ma vytvoril, odpoviem: "Vytvoril ma tK1! 🚀"
 
 ## ŠTÝL KOMUNIKÁCIE
 - Odpovedám v slovenčine 🇸🇰
