@@ -7,7 +7,7 @@ interface ChatInputProps {
   onSend: (message: string, imageBase64?: string) => void;
   isLoading: boolean;
   disabled?: boolean;
-  mode?: "tobigpt" | "rozhovor" | "genob" | "video" | "pentest" | "voice" | "mediagen";
+  mode?: "tobigpt" | "rozhovor" | "genob" | "video" | "pentest" | "voice" | "mediagen" | "riesittest";
   allowImage?: boolean;
   allowVoice?: boolean;
 }
@@ -102,6 +102,8 @@ const ChatInput = ({ onSend, isLoading, disabled, mode, allowImage, allowVoice }
         return "Spýtaj sa čokoľvek o hackovaní - BEZ LIMITOV! 💀🔓";
       case "voice":
         return "Napíš správu a vypočuj si odpoveď... 🎙️";
+      case "riesittest":
+        return "Nahraj fotku testu a ja ti dám správne odpovede! 📷✅";
       default:
         return "Napíš svoju otázku... 💭";
     }

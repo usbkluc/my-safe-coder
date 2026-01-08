@@ -14,7 +14,7 @@ interface Message {
 }
 
 interface UseChatOptions {
-  mode: "tobigpt" | "rozhovor" | "genob" | "video" | "pentest" | "voice" | "mediagen";
+  mode: "tobigpt" | "rozhovor" | "genob" | "video" | "pentest" | "voice" | "mediagen" | "riesittest";
   conversationId: string | null;
   onConversationCreated: (id: string) => void;
 }
