@@ -4,16 +4,20 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { 
   Trash2, Sparkles, Code, MessageCircle, Image, Video, Shield, 
-  Mic, Film, User, LogOut, History, Menu, GraduationCap, X 
+  Mic, Film, User, LogOut, History, Menu, GraduationCap, X, Key,
+  Settings
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import ChatMessage from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
 import ChatHistory from "@/components/ChatHistory";
 import AuthDialog from "@/components/AuthDialog";
 import MediaGenDialog from "@/components/MediaGenDialog";
+import ApiKeyManager from "@/components/ApiKeyManager";
 import { useChatWithHistory } from "@/hooks/useChatWithHistory";
 import { useAuth } from "@/contexts/AuthContext";
+import { useApiKeys } from "@/hooks/useApiKeys";
 
 type AIMode = "tobigpt" | "rozhovor" | "genob" | "video" | "pentest" | "voice" | "mediagen" | "riesittest";
 
@@ -77,12 +81,22 @@ const Index = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [showMediaGen, setShowMediaGen] = useState(false);
   const [showModeMenu, setShowModeMenu] = useState(false);
+  const [showApiKeys, setShowApiKeys] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { apiKeys, selectedKeyId, setSelectedKeyId, getActiveKey, isAdmin } = useApiKeys();
+
+  const activeKey = getActiveKey(currentMode);
 
   const { messages, isLoading, sendMessage, clearMessages } = useChatWithHistory({
     mode: currentMode,
     conversationId,
     onConversationCreated: setConversationId,
+    activeApiKey: activeKey ? {
+      api_key: activeKey.api_key,
+      api_endpoint: activeKey.api_endpoint,
+      model_name: activeKey.model_name,
+      provider: activeKey.provider,
+    } : null,
   });
 
   useEffect(() => {
@@ -343,9 +357,19 @@ const Index = () => {
                 {getWelcomeMessage()}
               </p>
               <p className="text-xs text-muted-foreground mb-6">Vytvoril ma tK1</p>
+              {user && !activeKey && (
+                <p className="text-sm text-amber-500 mb-4">
+                  ⚠️ Nemáš nastavený API kľúč. Klikni na 🔑 a pridaj si ho!
+                </p>
+              )}
+              {user && activeKey && (
+                <p className="text-xs text-muted-foreground mb-4">
+                  🔑 Aktívny: {activeKey.provider_name} ({activeKey.model_name || activeKey.provider})
+                </p>
+              )}
               {!user && (
                 <p className="text-sm text-primary mb-4">
-                  💡 Prihlás sa pre ukladanie histórie chatov!
+                  💡 Prihlás sa pre ukladanie histórie chatov a vlastné API kľúče!
                 </p>
               )}
               <div className="flex flex-wrap gap-2 mt-2 justify-center">
@@ -409,6 +433,7 @@ const Index = () => {
 
       <AuthDialog open={showAuthDialog} onOpenChange={setShowAuthDialog} />
       <MediaGenDialog open={showMediaGen} onOpenChange={setShowMediaGen} />
+      <ApiKeyManager open={showApiKeys} onOpenChange={setShowApiKeys} />
     </div>
   );
 };

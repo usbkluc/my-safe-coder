@@ -13,10 +13,18 @@ interface Message {
   generatingType?: "image" | "video";
 }
 
+interface ApiKeyInfo {
+  api_key: string;
+  api_endpoint: string | null;
+  model_name: string | null;
+  provider: string;
+}
+
 interface UseChatOptions {
   mode: "tobigpt" | "rozhovor" | "genob" | "video" | "pentest" | "voice" | "mediagen" | "riesittest";
   conversationId: string | null;
   onConversationCreated: (id: string) => void;
+  activeApiKey?: ApiKeyInfo | null;
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
@@ -61,7 +69,7 @@ async function generateImageActual(prompt: string): Promise<string | null> {
   }
 }
 
-export const useChatWithHistory = ({ mode, conversationId, onConversationCreated }: UseChatOptions) => {
+export const useChatWithHistory = ({ mode, conversationId, onConversationCreated, activeApiKey }: UseChatOptions) => {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -178,21 +186,31 @@ export const useChatWithHistory = ({ mode, conversationId, onConversationCreated
       }
 
       try {
-        const response = await fetch(CHAT_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
+        const requestBody: any = {
             messages: [...messages, userMessage].map((m) => ({
               role: m.role,
               content: m.content,
             })),
             mode,
             imageBase64,
-          }),
-        });
+          };
+
+          // Add user's API key info if available
+          if (activeApiKey) {
+            requestBody.userApiKey = activeApiKey.api_key;
+            requestBody.userApiEndpoint = activeApiKey.api_endpoint;
+            requestBody.userApiModel = activeApiKey.model_name;
+            requestBody.userProvider = activeApiKey.provider;
+          }
+
+          const response = await fetch(CHAT_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify(requestBody),
+          });
 
         // Check for JSON response (image/video generation or errors)
         const contentType = response.headers.get("content-type");
@@ -361,7 +379,7 @@ export const useChatWithHistory = ({ mode, conversationId, onConversationCreated
         setIsLoading(false);
       }
     },
-    [messages, mode, conversationId, user, onConversationCreated]
+    [messages, mode, conversationId, user, onConversationCreated, activeApiKey]
   );
 
   const clearMessages = useCallback(() => {
