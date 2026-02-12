@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_usage: {
+        Row: {
+          api_key_id: string | null
+          created_at: string | null
+          id: string
+          provider: string
+          tokens_used: number | null
+          user_id: string
+        }
+        Insert: {
+          api_key_id?: string | null
+          created_at?: string | null
+          id?: string
+          provider: string
+          tokens_used?: number | null
+          user_id: string
+        }
+        Update: {
+          api_key_id?: string | null
+          created_at?: string | null
+          id?: string
+          provider?: string
+          tokens_used?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_usage_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "user_api_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_usage_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           blocked: boolean | null
@@ -162,15 +204,111 @@ export type Database = {
         }
         Relationships: []
       }
+      user_api_keys: {
+        Row: {
+          allowed_modes: string[] | null
+          api_endpoint: string | null
+          api_key: string
+          created_at: string | null
+          daily_limit: number | null
+          id: string
+          is_active: boolean | null
+          model_name: string | null
+          monthly_limit: number | null
+          provider: Database["public"]["Enums"]["api_provider"]
+          provider_name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          allowed_modes?: string[] | null
+          api_endpoint?: string | null
+          api_key: string
+          created_at?: string | null
+          daily_limit?: number | null
+          id?: string
+          is_active?: boolean | null
+          model_name?: string | null
+          monthly_limit?: number | null
+          provider: Database["public"]["Enums"]["api_provider"]
+          provider_name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          allowed_modes?: string[] | null
+          api_endpoint?: string | null
+          api_key?: string
+          created_at?: string | null
+          daily_limit?: number | null
+          id?: string
+          is_active?: boolean | null
+          model_name?: string | null
+          monthly_limit?: number | null
+          provider?: Database["public"]["Enums"]["api_provider"]
+          provider_name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_api_keys_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      api_provider:
+        | "openai"
+        | "gemini"
+        | "grok"
+        | "wormgpt"
+        | "hackergpt"
+        | "claude"
+        | "custom"
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -297,6 +435,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      api_provider: [
+        "openai",
+        "gemini",
+        "grok",
+        "wormgpt",
+        "hackergpt",
+        "claude",
+        "custom",
+      ],
+      app_role: ["admin", "user"],
+    },
   },
 } as const
