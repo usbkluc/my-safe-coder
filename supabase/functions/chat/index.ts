@@ -170,12 +170,16 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, mode, imageBase64 } = await req.json();
+    const { messages, mode, imageBase64, userApiKey, userApiEndpoint, userApiModel, userProvider } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     
-    if (!OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY is not configured");
+    // Determine which API key and endpoint to use
+    const activeApiKey = userApiKey || OPENAI_API_KEY;
+    const isUserKey = !!userApiKey;
+    
+    if (!activeApiKey) {
+      throw new Error("Žiadny API kľúč nie je nakonfigurovaný. Pridaj si API kľúč v nastaveniach.");
     }
 
     const userMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
@@ -625,23 +629,56 @@ Som tu aby som ti pomohol s čímkoľvek potrebuješ!`;
 
     const systemPrompt = getSystemPrompt();
 
-    // Use OpenAI ChatGPT API
-    const modelToUse = mode === "pentest" ? "gpt-4o" : "gpt-4o-mini";
+    // Determine API endpoint and model based on user's key or defaults
+    let apiEndpoint = "https://api.openai.com/v1/chat/completions";
+    let modelToUse = mode === "pentest" ? "gpt-4o" : "gpt-4o-mini";
+    let headers: Record<string, string> = {
+      Authorization: `Bearer ${activeApiKey}`,
+      "Content-Type": "application/json",
+    };
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    if (isUserKey) {
+      // Use user's custom API settings
+      if (userApiEndpoint) apiEndpoint = userApiEndpoint;
+      if (userApiModel) modelToUse = userApiModel;
+      
+      // Special handling for Claude API
+      if (userProvider === "claude") {
+        headers = {
+          "x-api-key": activeApiKey,
+          "Content-Type": "application/json",
+          "anthropic-version": "2023-06-01",
+        };
+      }
+    }
+
+    console.log(`Using provider: ${userProvider || "openai"}, model: ${modelToUse}, endpoint: ${apiEndpoint}`);
+
+    // For Claude, use a different request format
+    let requestBody: any;
+    if (userProvider === "claude") {
+      requestBody = {
+        model: modelToUse,
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: messages.map((m: any) => ({ role: m.role, content: m.content })),
+        stream: true,
+      };
+    } else {
+      requestBody = {
         model: modelToUse,
         messages: [
           { role: "system", content: systemPrompt },
           ...messages,
         ],
         stream: true,
-      }),
+      };
+    }
+
+    const response = await fetch(apiEndpoint, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
