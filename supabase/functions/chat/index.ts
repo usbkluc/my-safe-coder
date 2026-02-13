@@ -175,10 +175,19 @@ serve(async (req) => {
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     
     // Determine which API key and endpoint to use
-    const activeApiKey = userApiKey || OPENAI_API_KEY;
+    // Priority: user's own key > OpenAI env key > Lovable AI gateway
     const isUserKey = !!userApiKey;
+    let activeApiKey: string;
+    let useLovableGateway = false;
     
-    if (!activeApiKey) {
+    if (userApiKey) {
+      activeApiKey = userApiKey;
+    } else if (OPENAI_API_KEY) {
+      activeApiKey = OPENAI_API_KEY;
+    } else if (LOVABLE_API_KEY) {
+      activeApiKey = LOVABLE_API_KEY;
+      useLovableGateway = true;
+    } else {
       throw new Error("Žiadny API kľúč nie je nakonfigurovaný. Pridaj si API kľúč v nastaveniach.");
     }
 
@@ -630,8 +639,12 @@ Som tu aby som ti pomohol s čímkoľvek potrebuješ!`;
     const systemPrompt = getSystemPrompt();
 
     // Determine API endpoint and model based on user's key or defaults
-    let apiEndpoint = "https://api.openai.com/v1/chat/completions";
-    let modelToUse = mode === "pentest" ? "gpt-4o" : "gpt-4o-mini";
+    let apiEndpoint = useLovableGateway 
+      ? "https://ai.gateway.lovable.dev/v1/chat/completions" 
+      : "https://api.openai.com/v1/chat/completions";
+    let modelToUse = useLovableGateway 
+      ? "openai/gpt-5-mini" 
+      : (mode === "pentest" ? "gpt-4o" : "gpt-4o-mini");
     let headers: Record<string, string> = {
       Authorization: `Bearer ${activeApiKey}`,
       "Content-Type": "application/json",
