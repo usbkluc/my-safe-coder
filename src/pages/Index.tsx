@@ -311,6 +311,17 @@ const Index = () => {
                   <User className="w-4 h-4 text-primary" />
                   <span className="text-sm font-medium">{user.username}</span>
                 </div>
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowApiKeys(true)}
+                    className="rounded-xl"
+                    title="Admin - API Kľúče"
+                  >
+                    <Settings className="w-5 h-5" />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -357,11 +368,6 @@ const Index = () => {
                 {getWelcomeMessage()}
               </p>
               <p className="text-xs text-muted-foreground mb-6">Vytvoril ma tK1</p>
-              {user && !activeKey && (
-                <p className="text-sm text-amber-500 mb-4">
-                  ⚠️ Nemáš nastavený API kľúč. Klikni na 🔑 a pridaj si ho!
-                </p>
-              )}
               {user && activeKey && (
                 <p className="text-xs text-muted-foreground mb-4">
                   🔑 Aktívny: {activeKey.provider_name} ({activeKey.model_name || activeKey.provider})
@@ -369,7 +375,7 @@ const Index = () => {
               )}
               {!user && (
                 <p className="text-sm text-primary mb-4">
-                  💡 Prihlás sa pre ukladanie histórie chatov a vlastné API kľúče!
+                  💡 Prihlás sa pre ukladanie histórie a admin funkcie!
                 </p>
               )}
               <div className="flex flex-wrap gap-2 mt-2 justify-center">
