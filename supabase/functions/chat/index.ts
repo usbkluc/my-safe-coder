@@ -688,11 +688,35 @@ Som tu aby som ti pomohol s čímkoľvek potrebuješ!`;
       };
     }
 
-    const response = await fetch(apiEndpoint, {
+    let response = await fetch(apiEndpoint, {
       method: "POST",
       headers,
       body: JSON.stringify(requestBody),
     });
+
+    // If primary key fails with 429/402 and we're NOT already on Lovable gateway, fallback
+    if (!response.ok && (response.status === 429 || response.status === 402) && !useLovableGateway && LOVABLE_API_KEY) {
+      console.log(`Primary API returned ${response.status}, falling back to Lovable AI gateway`);
+      const fallbackEndpoint = "https://ai.gateway.lovable.dev/v1/chat/completions";
+      const fallbackModel = "google/gemini-3-flash-preview";
+      const fallbackBody = {
+        model: fallbackModel,
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...messages,
+        ],
+        stream: true,
+      };
+
+      response = await fetch(fallbackEndpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(fallbackBody),
+      });
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
