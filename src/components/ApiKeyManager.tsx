@@ -21,7 +21,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Key, Plus, Trash2, Edit2, Shield, Loader2, Settings } from "lucide-react";
+import { Key, Plus, Trash2, Edit2, Shield, Loader2, Settings, UserPlus } from "lucide-react";
+
+interface UserProfile {
+  id: string;
+  username: string;
+}
 
 interface ApiKey {
   id: string;
@@ -71,6 +76,9 @@ const ApiKeyManager = ({ open, onOpenChange }: ApiKeyManagerProps) => {
   const [editingKey, setEditingKey] = useState<ApiKey | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [showAdminAddForm, setShowAdminAddForm] = useState(false);
 
   // Form state
   const [formProvider, setFormProvider] = useState("openai");
@@ -118,6 +126,14 @@ const ApiKeyManager = ({ open, onOpenChange }: ApiKeyManagerProps) => {
     setAllKeys((data as ApiKey[]) || []);
   };
 
+  const loadAllUsers = async () => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, username")
+      .order("username", { ascending: true });
+    setAllUsers((data as UserProfile[]) || []);
+  };
+
   const resetForm = () => {
     setFormProvider("openai");
     setFormName("");
@@ -140,8 +156,9 @@ const ApiKeyManager = ({ open, onOpenChange }: ApiKeyManagerProps) => {
     }
   };
 
-  const handleSave = async () => {
-    if (!user) return;
+  const handleSave = async (forUserId?: string) => {
+    const targetUserId = forUserId || user?.id;
+    if (!targetUserId) return;
     if (!formApiKey && !editingKey) {
       toast({ title: "Chyba", description: "Zadaj API kľúč", variant: "destructive" });
       return;
@@ -169,7 +186,7 @@ const ApiKeyManager = ({ open, onOpenChange }: ApiKeyManagerProps) => {
         toast({ title: "Uložené! ✅" });
       } else {
         await supabase.from("user_api_keys").insert({
-          user_id: user.id,
+          user_id: targetUserId,
           provider: formProvider as any,
           provider_name: formName || PROVIDERS.find((p) => p.value === formProvider)?.label || formProvider,
           api_key: formApiKey,
@@ -179,11 +196,13 @@ const ApiKeyManager = ({ open, onOpenChange }: ApiKeyManagerProps) => {
           monthly_limit: parseInt(formMonthlyLimit) || 1000,
           allowed_modes: formModes,
         });
-        toast({ title: "API kľúč pridaný! 🔑" });
+        const targetUser = allUsers.find(u => u.id === targetUserId);
+        toast({ title: forUserId ? `API kľúč pridaný pre ${targetUser?.username || "používateľa"}! 🔑` : "API kľúč pridaný! 🔑" });
       }
 
       resetForm();
       setShowAddForm(false);
+      setShowAdminAddForm(false);
       loadKeys();
       if (isAdmin) loadAllKeys();
     } catch (err) {
@@ -255,7 +274,10 @@ const ApiKeyManager = ({ open, onOpenChange }: ApiKeyManagerProps) => {
                 size="sm"
                 onClick={() => {
                   setShowAdminPanel(!showAdminPanel);
-                  if (!showAdminPanel) loadAllKeys();
+                  if (!showAdminPanel) {
+                    loadAllKeys();
+                    loadAllUsers();
+                  }
                 }}
                 className="gap-1"
               >
@@ -265,10 +287,147 @@ const ApiKeyManager = ({ open, onOpenChange }: ApiKeyManagerProps) => {
             </div>
           )}
 
-          {/* Admin panel - all users' keys */}
           {showAdminPanel && isAdmin && (
             <div className="space-y-3 mb-4">
-              <h3 className="font-semibold text-sm">Všetky API kľúče (všetkých používateľov)</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-sm">Všetky API kľúče</h3>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1"
+                  onClick={() => {
+                    resetForm();
+                    handleProviderChange("openai");
+                    setShowAdminAddForm(!showAdminAddForm);
+                  }}
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Pridať kľúč používateľovi
+                </Button>
+              </div>
+
+              {/* Admin add key for user form */}
+              {showAdminAddForm && (
+                <div className="space-y-3 border border-primary/20 rounded-lg p-3 bg-primary/5">
+                  <h4 className="font-semibold text-sm flex items-center gap-2">
+                    <UserPlus className="w-4 h-4 text-primary" />
+                    Vytvoriť API kľúč pre používateľa
+                  </h4>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs">Používateľ</Label>
+                    <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Vyber používateľa..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allUsers.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.username}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs">Poskytovateľ</Label>
+                    <Select value={formProvider} onValueChange={handleProviderChange}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PROVIDERS.map((p) => (
+                          <SelectItem key={p.value} value={p.value}>
+                            {p.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs">Názov</Label>
+                    <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Názov kľúča" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs">API Kľúč</Label>
+                    <Input value={formApiKey} onChange={(e) => setFormApiKey(e.target.value)} placeholder="sk-..." type="password" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs">API Endpoint</Label>
+                    <Input value={formEndpoint} onChange={(e) => setFormEndpoint(e.target.value)} placeholder="https://api.openai.com/v1/chat/completions" />
+                  </div>
+
+                  {selectedProvider && selectedProvider.models.length > 0 ? (
+                    <div className="space-y-2">
+                      <Label className="text-xs">Model</Label>
+                      <Select value={formModel} onValueChange={setFormModel}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {selectedProvider.models.map((m) => (
+                            <SelectItem key={m} value={m}>{m}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label className="text-xs">Model</Label>
+                      <Input value={formModel} onChange={(e) => setFormModel(e.target.value)} placeholder="gpt-4o" />
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-2">
+                      <Label className="text-xs">Denný limit</Label>
+                      <Input type="number" value={formDailyLimit} onChange={(e) => setFormDailyLimit(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Mesačný limit</Label>
+                      <Input type="number" value={formMonthlyLimit} onChange={(e) => setFormMonthlyLimit(e.target.value)} />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs">Povolené módy</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {ALL_MODES.map((mode) => (
+                        <Badge
+                          key={mode.value}
+                          variant={formModes.includes(mode.value) ? "default" : "outline"}
+                          className="cursor-pointer"
+                          onClick={() => toggleMode(mode.value)}
+                        >
+                          {mode.label}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => {
+                        if (!selectedUserId) {
+                          toast({ title: "Chyba", description: "Vyber používateľa", variant: "destructive" });
+                          return;
+                        }
+                        handleSave(selectedUserId);
+                      }}
+                      disabled={isLoading}
+                      className="flex-1"
+                    >
+                      {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pridať kľúč"}
+                    </Button>
+                    <Button variant="outline" onClick={() => { setShowAdminAddForm(false); resetForm(); }}>
+                      Zrušiť
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {allKeys.map((key) => (
                 <KeyCard
                   key={key.id}
@@ -277,6 +436,7 @@ const ApiKeyManager = ({ open, onOpenChange }: ApiKeyManagerProps) => {
                   onDelete={handleDelete}
                   onToggleActive={toggleActive}
                   showUser
+                  allUsers={allUsers}
                 />
               ))}
               {allKeys.length === 0 && (
@@ -421,7 +581,7 @@ const ApiKeyManager = ({ open, onOpenChange }: ApiKeyManagerProps) => {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button onClick={handleSave} disabled={isLoading} className="flex-1">
+                    <Button onClick={() => handleSave()} disabled={isLoading} className="flex-1">
                       {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : editingKey ? "Uložiť" : "Pridať"}
                     </Button>
                     <Button
@@ -464,53 +624,61 @@ const KeyCard = ({
   onDelete,
   onToggleActive,
   showUser,
+  allUsers,
 }: {
   apiKey: ApiKey;
   onEdit: (key: ApiKey) => void;
   onDelete: (id: string) => void;
   onToggleActive: (key: ApiKey) => void;
   showUser?: boolean;
-}) => (
-  <div className={`border rounded-lg p-3 space-y-2 ${!apiKey.is_active ? "opacity-50" : ""}`}>
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <Key className="w-4 h-4 text-primary" />
-        <span className="font-medium text-sm">{apiKey.provider_name}</span>
-        <Badge variant="secondary" className="text-xs">
-          {apiKey.provider}
-        </Badge>
+  allUsers?: UserProfile[];
+}) => {
+  const username = allUsers?.find(u => u.id === apiKey.user_id)?.username;
+  return (
+    <div className={`border rounded-lg p-3 space-y-2 ${!apiKey.is_active ? "opacity-50" : ""}`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Key className="w-4 h-4 text-primary" />
+          <span className="font-medium text-sm">{apiKey.provider_name}</span>
+          <Badge variant="secondary" className="text-xs">
+            {apiKey.provider}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-1">
+          <Switch
+            checked={apiKey.is_active}
+            onCheckedChange={() => onToggleActive(apiKey)}
+          />
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(apiKey)}>
+            <Edit2 className="w-3 h-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-destructive"
+            onClick={() => onDelete(apiKey.id)}
+          >
+            <Trash2 className="w-3 h-3" />
+          </Button>
+        </div>
       </div>
-      <div className="flex items-center gap-1">
-        <Switch
-          checked={apiKey.is_active}
-          onCheckedChange={() => onToggleActive(apiKey)}
-        />
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(apiKey)}>
-          <Edit2 className="w-3 h-3" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-destructive"
-          onClick={() => onDelete(apiKey.id)}
-        >
-          <Trash2 className="w-3 h-3" />
-        </Button>
+      {showUser && username && (
+        <div className="text-xs text-primary font-medium">👤 {username}</div>
+      )}
+      <div className="text-xs text-muted-foreground">
+        {apiKey.model_name && <span>Model: {apiKey.model_name} • </span>}
+        <span>API: ...{apiKey.api_key.slice(-4)}</span>
+        {apiKey.daily_limit && <span> • {apiKey.daily_limit}/deň</span>}
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {apiKey.allowed_modes?.map((mode) => (
+          <Badge key={mode} variant="outline" className="text-[10px] py-0">
+            {mode}
+          </Badge>
+        ))}
       </div>
     </div>
-    <div className="text-xs text-muted-foreground">
-      {apiKey.model_name && <span>Model: {apiKey.model_name} • </span>}
-      <span>API: ...{apiKey.api_key.slice(-4)}</span>
-      {apiKey.daily_limit && <span> • {apiKey.daily_limit}/deň</span>}
-    </div>
-    <div className="flex flex-wrap gap-1">
-      {apiKey.allowed_modes?.map((mode) => (
-        <Badge key={mode} variant="outline" className="text-[10px] py-0">
-          {mode}
-        </Badge>
-      ))}
-    </div>
-  </div>
-);
+  );
+};
 
 export default ApiKeyManager;
