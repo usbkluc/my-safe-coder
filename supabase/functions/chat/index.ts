@@ -45,44 +45,36 @@ async function searchWeb(query: string): Promise<string> {
   }
 }
 
-// Ultra high quality image generation
-async function generateImage(prompt: string, apiKey: string): Promise<string | null> {
+// Ultra high quality image generation - uses provided API key and endpoint
+async function generateImage(prompt: string, apiKey: string, endpoint: string, model: string): Promise<string | null> {
   try {
-    console.log("Generating ultra HD image with prompt:", prompt);
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    console.log("Generating image with prompt:", prompt, "model:", model);
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-pro-image-preview",
+        model: model,
         messages: [
           {
             role: "user",
             content: `Create an ultra high resolution, photorealistic, stunning image: ${prompt}. 
-            Make it visually breathtaking with:
-            - Rich vibrant colors and perfect lighting
-            - Professional composition and depth of field
-            - Extreme attention to detail and textures
-            - Cinematic quality with dramatic atmosphere
-            - 8K ultra HD resolution quality`,
+            Make it visually breathtaking with rich vibrant colors, professional composition, extreme detail, cinematic quality.`,
           },
         ],
-        modalities: ["image", "text"],
       }),
     });
 
     if (!response.ok) {
       console.error("Image generation failed:", response.status);
-      const errorText = await response.text();
-      console.error("Error details:", errorText);
       return null;
     }
 
     const data = await response.json();
     const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    console.log("Ultra HD image generated successfully");
+    console.log("Image generated successfully");
     return imageUrl || null;
   } catch (error) {
     console.error("Image generation error:", error);
@@ -90,43 +82,32 @@ async function generateImage(prompt: string, apiKey: string): Promise<string | n
   }
 }
 
-// Image editing function
-async function editImage(imageBase64: string, editPrompt: string, apiKey: string): Promise<string | null> {
+// Image editing function - uses provided API key and endpoint
+async function editImage(imageBase64: string, editPrompt: string, apiKey: string, endpoint: string, model: string): Promise<string | null> {
   try {
-    console.log("Editing image with prompt:", editPrompt);
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    console.log("Editing image with prompt:", editPrompt, "model:", model);
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-pro-image-preview",
+        model: model,
         messages: [
           {
             role: "user",
             content: [
-              {
-                type: "text",
-                text: `Edit this image: ${editPrompt}. Make the edit seamless and professional.`,
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: imageBase64,
-                },
-              },
+              { type: "text", text: `Edit this image: ${editPrompt}. Make the edit seamless and professional.` },
+              { type: "image_url", image_url: { url: imageBase64 } },
             ],
           },
         ],
-        modalities: ["image", "text"],
       }),
     });
 
     if (!response.ok) {
       console.error("Image editing failed:", response.status);
-      const errorText = await response.text();
-      console.error("Error details:", errorText);
       return null;
     }
 
@@ -221,7 +202,9 @@ serve(async (req) => {
     // Handle image EDITING when user provides an image and wants to edit it
     if (imageBase64 && (wantsImageEdit(userMessage) || mode === "genob")) {
       console.log("Image editing mode activated");
-      const editedImageUrl = await editImage(imageBase64, originalMessage, LOVABLE_API_KEY);
+      const imgEndpoint = autoEndpoint || userApiEndpoint || "https://api.openai.com/v1/chat/completions";
+      const imgModel = autoModel || userApiModel || "gpt-4o";
+      const editedImageUrl = await editImage(imageBase64, originalMessage, activeApiKey, imgEndpoint, imgModel);
       
       if (editedImageUrl) {
         return new Response(
@@ -675,15 +658,15 @@ Som tu aby som ti pomohol s čímkoľvek potrebuješ!`;
       // Use user's custom API settings (override auto-fetched)
       if (userApiEndpoint) apiEndpoint = userApiEndpoint;
       if (userApiModel) modelToUse = userApiModel;
-      
-      // Special handling for Claude API
-      if (effectiveProvider === "claude") {
-        headers = {
-          "x-api-key": activeApiKey,
-          "Content-Type": "application/json",
-          "anthropic-version": "2023-06-01",
-        };
-      }
+    }
+    
+    // Special handling for Claude API (both user keys and auto-fetched)
+    if (effectiveProvider === "claude") {
+      headers = {
+        "x-api-key": activeApiKey,
+        "Content-Type": "application/json",
+        "anthropic-version": "2023-06-01",
+      };
     }
 
     console.log(`Using provider: ${effectiveProvider || "openai"}, model: ${modelToUse}, endpoint: ${apiEndpoint}`);
