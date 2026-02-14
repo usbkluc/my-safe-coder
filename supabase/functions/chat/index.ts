@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -171,20 +172,47 @@ serve(async (req) => {
 
   try {
     const { messages, mode, imageBase64, userApiKey, userApiEndpoint, userApiModel, userProvider } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     
     // Determine which API key and endpoint to use
-    // Priority: user's own key > project OpenAI key (NO Lovable AI gateway)
+    // Priority: user's own key > auto-fetch from DB (admin-created keys)
     const isUserKey = !!userApiKey;
-    let activeApiKey: string;
+    let activeApiKey: string = "";
+    let autoEndpoint: string | null = null;
+    let autoModel: string | null = null;
+    let autoProvider: string | null = null;
     
     if (userApiKey) {
       activeApiKey = userApiKey;
-    } else if (OPENAI_API_KEY) {
-      activeApiKey = OPENAI_API_KEY;
     } else {
-      throw new Error("Žiadny API kľúč nie je nakonfigurovaný. Pridaj si API kľúč v nastaveniach.");
+      // Auto-fetch an active API key from the database (created by admin)
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+        
+        const { data: dbKey } = await supabaseAdmin
+          .from("user_api_keys")
+          .select("api_key, api_endpoint, model_name, provider, allowed_modes")
+          .eq("is_active", true)
+          .contains("allowed_modes", [mode || "rozhovor"])
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .single();
+        
+        if (dbKey) {
+          activeApiKey = dbKey.api_key;
+          autoEndpoint = dbKey.api_endpoint;
+          autoModel = dbKey.model_name;
+          autoProvider = dbKey.provider;
+          console.log(`Auto-using DB key: provider=${dbKey.provider}, model=${dbKey.model_name}`);
+        }
+      } catch (e) {
+        console.error("Failed to fetch DB key:", e);
+      }
+      
+      if (!activeApiKey) {
+        throw new Error("Žiadny API kľúč nie je nakonfigurovaný. Admin musí pridať API kľúč.");
+      }
     }
 
     const userMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
@@ -634,21 +662,22 @@ Som tu aby som ti pomohol s čímkoľvek potrebuješ!`;
 
     const systemPrompt = getSystemPrompt();
 
-    // Determine API endpoint and model based on user's key or defaults
-    let apiEndpoint = "https://api.openai.com/v1/chat/completions";
-    let modelToUse = mode === "pentest" ? "gpt-4o" : "gpt-4o-mini";
+    // Determine API endpoint and model based on user's key, auto-fetched DB key, or defaults
+    let apiEndpoint = autoEndpoint || "https://api.openai.com/v1/chat/completions";
+    let modelToUse = autoModel || (mode === "pentest" ? "gpt-4o" : "gpt-4o-mini");
+    const effectiveProvider = userProvider || autoProvider;
     let headers: Record<string, string> = {
       Authorization: `Bearer ${activeApiKey}`,
       "Content-Type": "application/json",
     };
 
     if (isUserKey) {
-      // Use user's custom API settings
+      // Use user's custom API settings (override auto-fetched)
       if (userApiEndpoint) apiEndpoint = userApiEndpoint;
       if (userApiModel) modelToUse = userApiModel;
       
       // Special handling for Claude API
-      if (userProvider === "claude") {
+      if (effectiveProvider === "claude") {
         headers = {
           "x-api-key": activeApiKey,
           "Content-Type": "application/json",
@@ -657,11 +686,11 @@ Som tu aby som ti pomohol s čímkoľvek potrebuješ!`;
       }
     }
 
-    console.log(`Using provider: ${userProvider || "openai"}, model: ${modelToUse}, endpoint: ${apiEndpoint}`);
+    console.log(`Using provider: ${effectiveProvider || "openai"}, model: ${modelToUse}, endpoint: ${apiEndpoint}`);
 
     // For Claude, use a different request format
     let requestBody: any;
-    if (userProvider === "claude") {
+    if (effectiveProvider === "claude") {
       requestBody = {
         model: modelToUse,
         max_tokens: 4096,
