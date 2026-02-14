@@ -175,18 +175,14 @@ serve(async (req) => {
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     
     // Determine which API key and endpoint to use
-    // Priority: user's own key > OpenAI env key > Lovable AI gateway
+    // Priority: user's own key > project OpenAI key (NO Lovable AI gateway)
     const isUserKey = !!userApiKey;
     let activeApiKey: string;
-    let useLovableGateway = false;
     
     if (userApiKey) {
       activeApiKey = userApiKey;
     } else if (OPENAI_API_KEY) {
       activeApiKey = OPENAI_API_KEY;
-    } else if (LOVABLE_API_KEY) {
-      activeApiKey = LOVABLE_API_KEY;
-      useLovableGateway = true;
     } else {
       throw new Error("Žiadny API kľúč nie je nakonfigurovaný. Pridaj si API kľúč v nastaveniach.");
     }
@@ -639,12 +635,8 @@ Som tu aby som ti pomohol s čímkoľvek potrebuješ!`;
     const systemPrompt = getSystemPrompt();
 
     // Determine API endpoint and model based on user's key or defaults
-    let apiEndpoint = useLovableGateway 
-      ? "https://ai.gateway.lovable.dev/v1/chat/completions" 
-      : "https://api.openai.com/v1/chat/completions";
-    let modelToUse = useLovableGateway 
-      ? "openai/gpt-5-mini" 
-      : (mode === "pentest" ? "gpt-4o" : "gpt-4o-mini");
+    let apiEndpoint = "https://api.openai.com/v1/chat/completions";
+    let modelToUse = mode === "pentest" ? "gpt-4o" : "gpt-4o-mini";
     let headers: Record<string, string> = {
       Authorization: `Bearer ${activeApiKey}`,
       "Content-Type": "application/json",
@@ -694,29 +686,7 @@ Som tu aby som ti pomohol s čímkoľvek potrebuješ!`;
       body: JSON.stringify(requestBody),
     });
 
-    // If primary key fails with 429/402 and we're NOT already on Lovable gateway, fallback
-    if (!response.ok && (response.status === 429 || response.status === 402) && !useLovableGateway && LOVABLE_API_KEY) {
-      console.log(`Primary API returned ${response.status}, falling back to Lovable AI gateway`);
-      const fallbackEndpoint = "https://ai.gateway.lovable.dev/v1/chat/completions";
-      const fallbackModel = "google/gemini-3-flash-preview";
-      const fallbackBody = {
-        model: fallbackModel,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages,
-        ],
-        stream: true,
-      };
-
-      response = await fetch(fallbackEndpoint, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(fallbackBody),
-      });
-    }
+    // No Lovable AI fallback - only user's own keys
 
     if (!response.ok) {
       const errorText = await response.text();
