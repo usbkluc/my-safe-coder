@@ -707,15 +707,48 @@ Som tu aby som ti pomohol s čímkoľvek potrebuješ!`;
       body: JSON.stringify(requestBody),
     });
 
-    // No Lovable AI fallback - only user's own keys
+    // If rate limited (429), try fallback to cheaper model
+    if (response.status === 429 && !isUserKey) {
+      console.log("Rate limited on primary model, trying fallback model...");
+      
+      // Try gemini-2.0-flash as fallback (higher free tier limits)
+      const fallbackModel = "gemini-2.0-flash";
+      const fallbackBody = effectiveProvider === "claude" 
+        ? { ...requestBody, model: fallbackModel }
+        : { ...requestBody, model: fallbackModel };
+      
+      // Wait a moment before retry
+      await new Promise(r => setTimeout(r, 2000));
+      
+      response = await fetch(apiEndpoint, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(fallbackBody),
+      });
+      
+      if (response.ok) {
+        console.log("Fallback to", fallbackModel, "succeeded");
+      }
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
       
       if (response.status === 429) {
+        // Parse retry delay if available
+        let retryMsg = "API kvóta vyčerpaná. ";
+        try {
+          const errData = JSON.parse(errorText);
+          const retryInfo = errData?.error?.details?.find((d: any) => d["@type"]?.includes("RetryInfo"));
+          if (retryInfo?.retryDelay) {
+            retryMsg += `Skús to znova za ${retryInfo.retryDelay}. `;
+          }
+        } catch {}
+        retryMsg += "Tip: Použi lacnejší model (gemini-2.0-flash) alebo počkaj chvíľu.";
+        
         return new Response(
-          JSON.stringify({ error: "Príliš veľa požiadaviek. Skús to znova o chvíľu." }),
+          JSON.stringify({ error: retryMsg }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
