@@ -226,15 +226,24 @@ serve(async (req) => {
     if (mode === "genob" && !imageBase64) {
       console.log("Ultra HD Image generation mode activated");
       
-      // Return a generating status first
-      return new Response(
-        JSON.stringify({ 
-          generating: "image",
-          prompt: originalMessage,
-          message: "🎨 Generujem ultra HD obrázok..."
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const imgEndpoint = autoEndpoint || userApiEndpoint || "https://api.openai.com/v1/chat/completions";
+      const imgModel = autoModel || userApiModel || "gpt-4o";
+      const imageUrl = await generateImage(originalMessage, activeApiKey, imgEndpoint, imgModel);
+      
+      if (imageUrl) {
+        return new Response(
+          JSON.stringify({ 
+            image: imageUrl,
+            message: "Tu je tvoj ultra HD obrázok! 🎨✨"
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } else {
+        return new Response(
+          JSON.stringify({ error: "Nepodarilo sa vygenerovať obrázok. Skús to znova." }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Handle video mode - returns info for client-side generation
