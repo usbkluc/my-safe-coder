@@ -29,40 +29,32 @@ interface UseChatOptions {
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
-// Actual image generation function
-async function generateImageActual(prompt: string): Promise<string | null> {
+// Image generation via edge function (uses DB keys, no Lovable gateway)
+async function generateImageViaEdge(prompt: string, apiKeyInfo?: ApiKeyInfo | null): Promise<string | null> {
   try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const CHAT_ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+    const requestBody: any = {
+      messages: [{ role: "user", content: `Vygeneruj obrázok: ${prompt}` }],
+      mode: "genob",
+      imageBase64: undefined,
+    };
+    if (apiKeyInfo) {
+      requestBody.userApiKey = apiKeyInfo.api_key;
+      requestBody.userApiEndpoint = apiKeyInfo.api_endpoint;
+      requestBody.userApiModel = apiKeyInfo.model_name;
+      requestBody.userProvider = apiKeyInfo.provider;
+    }
+    const response = await fetch(CHAT_ENDPOINT, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({
-        model: "google/gemini-3-pro-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: `Create an ultra high resolution, photorealistic, stunning image: ${prompt}. 
-            Make it visually breathtaking with:
-            - Rich vibrant colors and perfect lighting
-            - Professional composition and depth of field
-            - Extreme attention to detail and textures
-            - Cinematic quality with dramatic atmosphere
-            - 8K ultra HD resolution quality`,
-          },
-        ],
-        modalities: ["image", "text"],
-      }),
+      body: JSON.stringify(requestBody),
     });
-
-    if (!response.ok) {
-      console.error("Image generation failed:", response.status);
-      return null;
-    }
-
+    if (!response.ok) return null;
     const data = await response.json();
-    return data.choices?.[0]?.message?.images?.[0]?.image_url?.url || null;
+    return data.image || null;
   } catch (error) {
     console.error("Image generation error:", error);
     return null;
@@ -244,7 +236,7 @@ export const useChatWithHistory = ({ mode, conversationId, onConversationCreated
             }]);
 
             // Actually generate the image
-            const imageUrl = await generateImageActual(data.prompt || content);
+            const imageUrl = await generateImageViaEdge(data.prompt || content, activeApiKey);
             
             // Replace generating message with result
             if (imageUrl) {

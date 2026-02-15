@@ -119,6 +119,10 @@
     @apply bg-background text-foreground font-body antialiased;
     background: var(--gradient-bg);
     min-height: 100vh;
+    min-height: 100dvh;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -167,6 +171,14 @@
   
   .font-playful {
     font-family: 'Comic Neue', cursive;
+  }
+
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 

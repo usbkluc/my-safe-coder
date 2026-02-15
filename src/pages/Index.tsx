@@ -216,9 +216,9 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="h-screen h-[100dvh] flex flex-col bg-background overflow-hidden">
       {/* Header */}
-      <header className="sticky top-0 z-10 glass-card border-b px-4 py-3">
+      <header className="sticky top-0 z-10 glass-card border-b px-3 sm:px-4 py-2 sm:py-3 safe-top">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* Mode Menu Button */}
@@ -293,15 +293,15 @@ const Index = () => {
               </SheetContent>
             </Sheet>
 
-            <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${config.color} flex items-center justify-center animate-float`}>
-              <ModeIcon className="w-7 h-7 text-white" />
+            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br ${config.color} flex items-center justify-center animate-float`}>
+              <ModeIcon className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-xl font-bold text-foreground flex items-center gap-1 sm:gap-2 truncate">
                 {config.label}
-                <Sparkles className="w-5 h-5 text-accent" />
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-accent flex-shrink-0" />
               </h1>
-              <p className="text-xs text-muted-foreground">Vytvoril tK1</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Vytvoril tK1</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -356,18 +356,18 @@ const Index = () => {
       </header>
 
       {/* Chat Area */}
-      <main className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-4">
-        <ScrollArea className="flex-1 py-6" ref={scrollRef}>
+      <main className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-3 sm:px-4 overflow-hidden">
+        <ScrollArea className="flex-1 py-4 sm:py-6" ref={scrollRef}>
           {messages.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center py-20 text-center">
-              <div className={`w-24 h-24 rounded-3xl bg-gradient-to-br ${config.color} flex items-center justify-center mb-6 animate-bounce`}>
-                <ModeIcon className="w-12 h-12 text-white" />
+            <div className="h-full flex flex-col items-center justify-center py-10 sm:py-20 text-center px-2">
+              <div className={`w-16 h-16 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-br ${config.color} flex items-center justify-center mb-4 sm:mb-6 animate-bounce`}>
+                <ModeIcon className="w-8 h-8 sm:w-12 sm:h-12 text-white" />
               </div>
-              <h2 className="text-2xl font-bold mb-2">Ahoj! Som {config.label} 🚀</h2>
-              <p className="text-muted-foreground max-w-md mb-2">
+              <h2 className="text-xl sm:text-2xl font-bold mb-2">Ahoj! Som {config.label} 🚀</h2>
+              <p className="text-sm sm:text-base text-muted-foreground max-w-md mb-2">
                 {getWelcomeMessage()}
               </p>
-              <p className="text-xs text-muted-foreground mb-6">Vytvoril ma tK1</p>
+              <p className="text-xs text-muted-foreground mb-4 sm:mb-6">Vytvoril ma tK1</p>
               {user && activeKey && (
                 <p className="text-xs text-muted-foreground mb-4">
                   🔑 Aktívny: {activeKey.provider_name} ({activeKey.model_name || activeKey.provider})
@@ -378,12 +378,12 @@ const Index = () => {
                   💡 Prihlás sa pre ukladanie histórie a admin funkcie!
                 </p>
               )}
-              <div className="flex flex-wrap gap-2 mt-2 justify-center">
+              <div className="flex flex-wrap gap-2 mt-2 justify-center px-2">
                 {getSuggestions().map((suggestion) => (
                   <Button
                     key={suggestion}
                     variant="outline"
-                    className={`rounded-full border-2 hover:border-primary hover:bg-primary/5`}
+                    className="rounded-full border-2 hover:border-primary hover:bg-primary/5 text-xs sm:text-sm"
                     onClick={() => sendMessage(suggestion)}
                   >
                     {suggestion}
@@ -426,7 +426,7 @@ const Index = () => {
         </ScrollArea>
 
         {/* Input Area */}
-        <div className="sticky bottom-0 py-4 bg-gradient-to-t from-background via-background to-transparent">
+        <div className="sticky bottom-0 py-2 sm:py-4 pb-[env(safe-area-inset-bottom,8px)] bg-gradient-to-t from-background via-background to-transparent">
           <ChatInput 
             onSend={sendMessage} 
             isLoading={isLoading} 
