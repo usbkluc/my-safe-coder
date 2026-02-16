@@ -707,48 +707,102 @@ Som tu aby som ti pomohol s čímkoľvek potrebuješ!`;
       body: JSON.stringify(requestBody),
     });
 
-    // If rate limited (429), try fallback strategies
-    if (response.status === 429 && !isUserKey) {
-      console.log("Rate limited on primary model, trying fallback strategies...");
+    // If rate limited or failed, try fallback strategies
+    if (!response.ok && !isUserKey) {
+      console.log(`Primary request failed (${response.status}), trying fallback strategies...`);
       
-      // Strategy 1: Try different model on same endpoint
-      const fallbackModel = "gemini-2.0-flash-lite";
-      await new Promise(r => setTimeout(r, 1500));
-      
-      response = await fetch(apiEndpoint, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ ...requestBody, model: fallbackModel }),
-      });
-      
-      if (response.ok) {
-        console.log("Fallback to", fallbackModel, "succeeded");
-      } else {
-        // Strategy 2: Try OpenAI from env secret
-        const openaiKey = Deno.env.get("OPENAI_API_KEY");
-        if (openaiKey) {
-          console.log("Gemini exhausted, falling back to OpenAI...");
-          const openaiBody = {
-            model: "gpt-4o-mini",
-            messages: [
-              { role: "system", content: requestBody.system || (requestBody.messages?.[0]?.role === "system" ? requestBody.messages[0].content : "") },
-              ...(requestBody.messages?.filter((m: any) => m.role !== "system") || messages),
-            ],
-            stream: true,
-          };
+      // Strategy 1: Try Gemini with env secret key (different key)
+      const geminiEnvKey = Deno.env.get("GEMINI_API_KEY");
+      if (geminiEnvKey) {
+        console.log("Trying Gemini with env secret key...");
+        await new Promise(r => setTimeout(r, 1000));
+        
+        const geminiBody = {
+          model: "gemini-2.0-flash",
+          contents: [
+            { role: "user", parts: [{ text: requestBody.system || (requestBody.messages?.[0]?.role === "system" ? requestBody.messages[0].content : "") }] },
+            ...messages.filter((m: any) => m.role !== "system").map((m: any) => ({
+              role: m.role === "assistant" ? "model" : "user",
+              parts: [{ text: m.content }],
+            })),
+          ],
+        };
+        
+        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${geminiEnvKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(geminiBody),
+        });
+        
+        if (response.ok) {
+          console.log("Fallback to Gemini env key succeeded");
+          // Transform Gemini SSE to OpenAI-compatible SSE
+          const reader = response.body!.getReader();
+          const decoder = new TextDecoder();
+          const encoder = new TextEncoder();
           
-          response = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${openaiKey}`,
-              "Content-Type": "application/json",
+          const stream = new ReadableStream({
+            async start(controller) {
+              let buffer = "";
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                  controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+                  controller.close();
+                  break;
+                }
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop() || "";
+                for (const line of lines) {
+                  if (line.startsWith("data: ")) {
+                    try {
+                      const data = JSON.parse(line.slice(6));
+                      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                      if (text) {
+                        const chunk = { choices: [{ delta: { content: text } }] };
+                        controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+                      }
+                    } catch {}
+                  }
+                }
+              }
             },
-            body: JSON.stringify(openaiBody),
           });
           
-          if (response.ok) {
-            console.log("Fallback to OpenAI succeeded");
-          }
+          return new Response(stream, {
+            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+          });
+        }
+      }
+      
+      // Strategy 2: Try OpenAI with env secret key
+      const openaiKey = Deno.env.get("OPENAI_API_KEY");
+      if (openaiKey) {
+        console.log("Trying OpenAI fallback...");
+        await new Promise(r => setTimeout(r, 500));
+        
+        const systemContent = requestBody.system || (requestBody.messages?.[0]?.role === "system" ? requestBody.messages[0].content : "");
+        const openaiBody = {
+          model: "gpt-4o-mini",
+          messages: [
+            ...(systemContent ? [{ role: "system", content: systemContent }] : []),
+            ...messages.filter((m: any) => m.role !== "system"),
+          ],
+          stream: true,
+        };
+        
+        response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${openaiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(openaiBody),
+        });
+        
+        if (response.ok) {
+          console.log("Fallback to OpenAI succeeded");
         }
       }
     }
