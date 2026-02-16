@@ -5,7 +5,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { 
   Trash2, Sparkles, Code, MessageCircle, Image, Video, Shield, 
   Mic, Film, User, LogOut, History, Menu, GraduationCap, X, Key,
-  Settings
+  Settings, Sun, Moon, Zap, Globe, Info, ChevronRight,
+  Clock, MessageSquarePlus, Palette, HelpCircle
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -82,8 +83,15 @@ const Index = () => {
   const [showMediaGen, setShowMediaGen] = useState(false);
   const [showModeMenu, setShowModeMenu] = useState(false);
   const [showApiKeys, setShowApiKeys] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
+  const [activeTab, setActiveTab] = useState<'modes' | 'history' | 'tools'>('modes');
   const scrollRef = useRef<HTMLDivElement>(null);
   const { apiKeys, selectedKeyId, setSelectedKeyId, getActiveKey, isAdmin } = useApiKeys();
+
+  const toggleDarkMode = () => {
+    document.documentElement.classList.toggle('dark');
+    setIsDarkMode(!isDarkMode);
+  };
 
   const activeKey = getActiveKey(currentMode);
 
@@ -228,56 +236,110 @@ const Index = () => {
                   <Menu className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-80 p-0">
+              <SheetContent side="left" className="w-80 p-0 bg-card">
                 <div className="h-full flex flex-col">
-                  <div className="p-4 border-b flex items-center justify-between">
-                    <h2 className="font-semibold flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-primary" />
-                      Módy
-                    </h2>
-                  </div>
-                  <ScrollArea className="flex-1 p-4">
-                    <div className="space-y-2">
-                      {(Object.keys(modeConfig) as AIMode[]).map((mode) => {
-                        const Icon = modeConfig[mode].icon;
-                        const isActive = currentMode === mode;
-                        return (
-                          <button
-                            key={mode}
-                            onClick={() => handleModeChange(mode)}
-                            className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
-                              isActive 
-                                ? `bg-gradient-to-r ${modeConfig[mode].color} text-white shadow-lg` 
-                                : "hover:bg-muted"
-                            }`}
-                          >
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                              isActive ? "bg-white/20" : `bg-gradient-to-br ${modeConfig[mode].color}`
-                            }`}>
-                              <Icon className={`w-5 h-5 ${isActive ? "text-white" : "text-white"}`} />
-                            </div>
-                            <div className="text-left">
-                              <p className={`font-medium ${isActive ? "text-white" : "text-foreground"}`}>
-                                {modeConfig[mode].label}
-                              </p>
-                              <p className={`text-xs ${isActive ? "text-white/80" : "text-muted-foreground"}`}>
-                                {modeConfig[mode].description}
-                              </p>
-                            </div>
-                          </button>
-                        );
-                      })}
+                  {/* Logo / Brand Header */}
+                  <div className="p-4 border-b bg-gradient-to-r from-primary/10 to-accent/10">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+                        <Zap className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="font-bold text-lg text-foreground">TobiGPT</h2>
+                        <p className="text-[10px] text-muted-foreground">AI Platforma by tK1</p>
+                      </div>
                     </div>
-                  </ScrollArea>
-                  
-                  {/* History in the same menu if logged in */}
-                  {user && (
-                    <>
-                      <div className="p-4 border-t">
-                        <h3 className="font-semibold flex items-center gap-2 mb-3">
-                          <History className="w-4 h-4" />
-                          História chatov
-                        </h3>
+                  </div>
+
+                  {/* Tab Navigation */}
+                  <div className="flex border-b">
+                    <button
+                      onClick={() => setActiveTab('modes')}
+                      className={`flex-1 py-2.5 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                        activeTab === 'modes' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Módy
+                    </button>
+                    {user && (
+                      <button
+                        onClick={() => setActiveTab('history')}
+                        className={`flex-1 py-2.5 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                          activeTab === 'history' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        <History className="w-3.5 h-3.5" />
+                        História
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setActiveTab('tools')}
+                      className={`flex-1 py-2.5 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                        activeTab === 'tools' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Settings className="w-3.5 h-3.5" />
+                      Nástroje
+                    </button>
+                  </div>
+
+                  {/* Content Area */}
+                  <ScrollArea className="flex-1">
+                    {activeTab === 'modes' && (
+                      <div className="p-3 space-y-1.5">
+                        {/* New Chat Button */}
+                        <button
+                          onClick={() => {
+                            handleClearChat();
+                            setShowModeMenu(false);
+                          }}
+                          className="w-full flex items-center gap-3 p-3 rounded-xl bg-primary/10 hover:bg-primary/20 transition-colors border border-primary/20 mb-3"
+                        >
+                          <MessageSquarePlus className="w-5 h-5 text-primary" />
+                          <span className="font-semibold text-sm text-primary">Nový chat</span>
+                        </button>
+
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider px-2 pb-1">AI Módy</p>
+                        {(Object.keys(modeConfig) as AIMode[]).map((mode) => {
+                          const Icon = modeConfig[mode].icon;
+                          const isActive = currentMode === mode;
+                          return (
+                            <button
+                              key={mode}
+                              onClick={() => handleModeChange(mode)}
+                              className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+                                isActive 
+                                  ? `bg-gradient-to-r ${modeConfig[mode].color} text-white shadow-lg` 
+                                  : "hover:bg-muted"
+                              }`}
+                            >
+                              <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                                isActive ? "bg-white/20" : `bg-gradient-to-br ${modeConfig[mode].color}`
+                              }`}>
+                                <Icon className="w-4 h-4 text-white" />
+                              </div>
+                              <div className="text-left flex-1 min-w-0">
+                                <p className={`font-semibold text-sm ${isActive ? "text-white" : "text-foreground"}`}>
+                                  {modeConfig[mode].label}
+                                </p>
+                                <p className={`text-[10px] truncate ${isActive ? "text-white/80" : "text-muted-foreground"}`}>
+                                  {modeConfig[mode].description}
+                                </p>
+                              </div>
+                              <ChevronRight className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-white/60" : "text-muted-foreground/40"}`} />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {activeTab === 'history' && user && (
+                      <div className="p-3">
+                        <div className="flex items-center gap-2 mb-3 px-1">
+                          <Clock className="w-4 h-4 text-muted-foreground" />
+                          <p className="text-xs text-muted-foreground">Tvoje predchádzajúce chaty</p>
+                        </div>
                         <ChatHistory 
                           onSelectConversation={(id) => {
                             handleSelectConversation(id);
@@ -287,8 +349,150 @@ const Index = () => {
                           currentMode={currentMode}
                         />
                       </div>
-                    </>
-                  )}
+                    )}
+
+                    {activeTab === 'tools' && (
+                      <div className="p-3 space-y-1.5">
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider px-2 pb-1">Nastavenia</p>
+                        
+                        {/* Dark Mode Toggle */}
+                        <button
+                          onClick={toggleDarkMode}
+                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors"
+                        >
+                          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
+                            {isDarkMode ? <Sun className="w-4 h-4 text-white" /> : <Moon className="w-4 h-4 text-white" />}
+                          </div>
+                          <div className="text-left flex-1">
+                            <p className="font-semibold text-sm text-foreground">{isDarkMode ? "Svetlý režim" : "Tmavý režim"}</p>
+                            <p className="text-[10px] text-muted-foreground">Prepni vzhľad aplikácie</p>
+                          </div>
+                        </button>
+
+                        {/* Web Search Info */}
+                        <button
+                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors"
+                          onClick={() => {
+                            toast({ title: "🌐 Web vyhľadávanie", description: "Použi slová ako 'vyhľadaj', 'nájdi' v správe pre hľadanie na webe!" });
+                          }}
+                        >
+                          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                            <Globe className="w-4 h-4 text-white" />
+                          </div>
+                          <div className="text-left flex-1">
+                            <p className="font-semibold text-sm text-foreground">Web vyhľadávanie</p>
+                            <p className="text-[10px] text-muted-foreground">Hľadaj na internete cez chat</p>
+                          </div>
+                        </button>
+
+                        {/* Theme / Palette */}
+                        <button
+                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors"
+                          onClick={() => {
+                            toast({ title: "🎨 Téma", description: "Téma sa automaticky prispôsobí podľa zvoleného módu." });
+                          }}
+                        >
+                          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
+                            <Palette className="w-4 h-4 text-white" />
+                          </div>
+                          <div className="text-left flex-1">
+                            <p className="font-semibold text-sm text-foreground">Téma & Farby</p>
+                            <p className="text-[10px] text-muted-foreground">Automatická podľa módu</p>
+                          </div>
+                        </button>
+
+                        {/* Admin API Keys */}
+                        {isAdmin && (
+                          <button
+                            onClick={() => {
+                              setShowApiKeys(true);
+                              setShowModeMenu(false);
+                            }}
+                            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors"
+                          >
+                            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                              <Key className="w-4 h-4 text-white" />
+                            </div>
+                            <div className="text-left flex-1">
+                              <p className="font-semibold text-sm text-foreground">API Kľúče</p>
+                              <p className="text-[10px] text-muted-foreground">Spravuj API prístupy</p>
+                            </div>
+                          </button>
+                        )}
+
+                        <div className="my-3 border-t" />
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider px-2 pb-1">Informácie</p>
+
+                        {/* About */}
+                        <button
+                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors"
+                          onClick={() => {
+                            toast({ 
+                              title: "ℹ️ O aplikácii", 
+                              description: "TobiGPT - AI platforma vytvorená tK1. Programovanie, obrázky, video, pentesting a viac!" 
+                            });
+                          }}
+                        >
+                          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
+                            <Info className="w-4 h-4 text-white" />
+                          </div>
+                          <div className="text-left flex-1">
+                            <p className="font-semibold text-sm text-foreground">O TobiGPT</p>
+                            <p className="text-[10px] text-muted-foreground">Verzia 2.0 • by tK1</p>
+                          </div>
+                        </button>
+
+                        {/* Help */}
+                        <button
+                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors"
+                          onClick={() => {
+                            toast({ 
+                              title: "❓ Pomoc", 
+                              description: "Vyber mód, napíš správu a AI odpovie. Použi 'vyhľadaj' pre web, nahraj fotku pre úpravu obrázkov." 
+                            });
+                          }}
+                        >
+                          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
+                            <HelpCircle className="w-4 h-4 text-white" />
+                          </div>
+                          <div className="text-left flex-1">
+                            <p className="font-semibold text-sm text-foreground">Pomoc</p>
+                            <p className="text-[10px] text-muted-foreground">Ako používať TobiGPT</p>
+                          </div>
+                        </button>
+                      </div>
+                    )}
+                  </ScrollArea>
+
+                  {/* Footer with user info */}
+                  <div className="p-3 border-t bg-muted/30">
+                    {user ? (
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+                          <User className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm truncate text-foreground">{user.username}</p>
+                          <p className="text-[10px] text-muted-foreground">{isAdmin ? "👑 Admin" : "Používateľ"}</p>
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={logout} className="rounded-lg h-8 w-8">
+                          <LogOut className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        className="w-full rounded-xl gap-2"
+                        onClick={() => {
+                          setShowAuthDialog(true);
+                          setShowModeMenu(false);
+                        }}
+                      >
+                        <User className="w-4 h-4" />
+                        Prihlásiť sa
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>
